@@ -1,6 +1,14 @@
+# emacs
+*~
+\#*\#
+.\#*
+.dir-locals.el
+.projectile
+*.~undo-tree~
 
-
-
-# Added by cargo
-
+# rust
+**/*.rs.bk
+/target/
+/bin
 /target
+cargo-lock.json

@@ -6,7 +6,26 @@ You describe a system (its state, how inputs are chosen, which inputs are legal,
 
 Named for Emilio Roxin, whose 1960s work on generalized dynamical systems is the mathematical origin of the idea.
 
-> **Status: design phase.** Nothing is implemented yet. This README records the current design, what has been decided, what is still open, and what could go wrong. All syntax below is provisional.
+> **Status: design phase.** Nothing is implemented yet. This README records the current design, what has been decided, what is still open, and what could go wrong. All syntax below is provisional. Precise semantics are drafted in `docs/core-semantics.md`, and the reasoning behind each decision is in `docs/decisions.md`.
+
+---
+
+## Contents
+
+1. [Why this exists](#why-this-exists)
+2. [GDS in 60 seconds](#gds-in-60-seconds)
+3. [A taste of Roxin](#a-taste-of-roxin-provisional-syntax)
+4. [Numbers](#numbers-provisional-syntax)
+5. [Declarations](#declarations-provisional-syntax)
+6. [Time and replayed data](#time-and-replayed-data-provisional-syntax)
+7. [Scope](#scope)
+8. [Design decisions](#design-decisions) (principles, defaults, decided, leans, `extern`)
+9. [Planned features](#planned-features)
+10. [Documentation plan](#documentation-plan)
+11. [Roadmap](#roadmap) and benchmark models
+12. [Risks](#risks) and known gaps
+13. [References](#references)
+14. [Open Questions](#open-questions)
 
 ---
 
@@ -21,7 +40,7 @@ Roxin asks what happens if the GDS ideas are first-class parts of a language:
 - One program can be *simulated*, *explored exhaustively*, and *checked against invariants* without rewriting it.
 - Results are typed, reproducible, and cached.
 
-Roxin is also a vehicle for learning language design and implementation: type checking, effect systems, interpreters, and eventually compilation.
+Roxin is also a vehicle for learning language design and implementation: type checking, interpreters, bytecode VMs, and eventually verification.
 
 ---
 
@@ -73,7 +92,15 @@ run Thermostat from Room { temp: 10 } for 8 steps
     sweep k in [0.25, 0.5, 1.5]
 ```
 
-Inside a step, `s` is the old state and `u` is the input record. The mechanism is one record of per-field expressions that all read the old state, so fields update simultaneously.
+Inside a step, `s` is the old state and `u` is the input record. The mechanism is one record of per-field expressions that all read the old state, so fields update simultaneously. A mechanism must account for every field of the state: fields it does not change are carried over with `..s`.
+
+```
+state Room { temp: float, humidity: float }
+
+mechanism:
+    temp: s.temp + u.heat
+    ..s                                -- humidity passes through unchanged
+```
 
 Decision rules can be named and swapped for A/B comparison, and `allowed` limits what is legal:
 
@@ -94,9 +121,11 @@ step Heating:
 A step with no choice to make omits `input:` entirely:
 
 ```
+state Savings { balance: decimal(2) }
+
 step Interest:
     mechanism:
-        balance: s.balance * 1.01
+        balance: round(s.balance * 1.01, nearest)
 ```
 
 `allowed` is declared at the step level, so it can constrain several input fields together (for example `alice + bob <= s.balance`).
@@ -104,7 +133,7 @@ step Interest:
 Design intent for the surface language:
 
 - Ordinary `name: Type` annotations everywhere. No invented type syntax.
-- Keywords only for GDS ideas and a few everyday words: `state`, `type`, `step`, `input`, `allowed`, `mechanism`, `input map`, `system`, `invariant`, `run`, and later `sweep`, `metric`, and `reach`.
+- Keywords only for GDS ideas and a few everyday words: `state`, `type`, `param`, `step`, `input`, `allowed`, `mechanism`, `input map`, `system`, `invariant`, `metric`, `data`, `tolerance`, `run`, `sweep`, and later `reach`.
 - **A feature you don't use should cost you no syntax.**
 
 ---
@@ -126,9 +155,11 @@ invariant NotShrinking(s: Booth) = s.apples * s.oranges >= k                  --
 
 - `within 0.5` is an absolute tolerance; `within 0.0001%` is relative.
 - A `float` `==` or `!=` with neither `within` nor a model `tolerance` is a check-time error: *"Float equality needs a tolerance. Add `within`, or declare `tolerance` for the model."*
-- A purely relative tolerance makes a comparison against exactly 0 exact, so use an absolute `within` there.
+- A purely relative tolerance never makes a nonzero number equal to 0, so use an absolute `within` there.
 - `decimal` equality is exact unless `within` is given. `int` equality is always exact.
-- Mixing `float` with `decimal` or `int` without a conversion is a type error.
+- `int` has no size limit. Mixing `float` with `decimal` or `int` without a conversion is a type error.
+- Integer division is `//` (floor) and `%` (floored modulo). Plain `/` on two `int` values is a check error.
+- A NaN, an infinity, or a division by zero stops the job and is recorded.
 
 Decimals say how many places they keep, and rounding is explicit:
 
@@ -138,9 +169,10 @@ param k: decimal(6) = 10000
 
 mechanism:
     oranges: round(k / (s.apples + u.in), up)      -- the rounding choice is visible
+    ..s
 ```
 
-With 110 apples, rounding **up** gives `90.909091` and a product of `10000.00001` (so `apples * oranges >= k` holds). Rounding **down** gives `90.909090` and `9999.9999` (so it fails). These values were computed by hand and are unverified.
+With 110 apples, rounding **up** gives `90.909091` and a product of `10000.000010` (so `apples * oranges >= k` holds). Rounding **down** gives `90.909090` and `9999.999900` (so it fails). Both values were checked with exact arithmetic.
 
 ---
 
@@ -184,6 +216,8 @@ Each decision gets its own input field, and the mechanism combines them explicit
 Replaying outside data:
 
 ```
+state Account { balance: decimal(2), holdings: int }
+
 data prices = csv("prices.csv")           -- columns: step, price
 
 step Trade:
@@ -191,6 +225,7 @@ step Trade:
         price: decimal(2) = prices.price[step]
     mechanism:
         balance: s.balance + s.holdings * u.price
+        ..s
 ```
 
 A possible later addition is `every N steps` on a step as sugar for "this step does nothing on other steps."
@@ -222,17 +257,29 @@ A possible later addition is `every N steps` on a step as sugar for "this step d
 
 ## Design decisions
 
-### Design principle: defaults over configuration
+### Design principles
 
-The 99% case must need no configuration. Every option has a named default chosen for the common case, rarely used machinery is hidden, and anything hidden stays configurable. A new feature is judged by how little it costs someone who does not use it. One of cadCAD's biggest pain points was the boilerplate needed before a basic run would execute.
+**Defaults over configuration.** The 99% case must need no configuration. Every option has a named default chosen for the common case, rarely used machinery is hidden, and anything hidden stays configurable. A new feature is judged by how little it costs someone who does not use it. One of cadCAD's biggest pain points was the boilerplate needed before a basic run would execute.
 
 **Boundary rule.** A default is acceptable when the common case is clear and a wrong default is visible and harmless (the seed, the progress bar, the console output). Where a wrong default could silently weaken a guarantee, as with number types and float tolerance, the author must decide and the checker refuses to guess.
 
-**Verification rule.** Every feature must state how it appears to a solver (what a proof about it would look like), or be explicitly marked unverifiable. The language is designed so that properties of models can be checked or proved, not only observed. Pure mechanisms, declarative `allowed` sets, and exact numeric types exist largely for this reason. The central proof is an inductive invariant: it holds at the start, and for every state satisfying it and every admissible input, the mechanism's result satisfies it again.
+**Verification rule.** Every feature must state how it appears to a solver (what a proof about it would look like), or be explicitly marked unverifiable. The language is designed so that properties of models can be checked or proved, not only observed. The central proof is an inductive invariant: it holds at the start, and for every state satisfying it and every admissible input, the mechanism's result satisfies it again. Proof support is planned, not built; the table shows how each feature is expected to look to a solver.
+
+| Feature | How a solver sees it | Difficulty |
+|---|---|---|
+| `int` | integer arithmetic (unbounded, so no wraparound reasoning) | straightforward |
+| `decimal(N)` | integers scaled by a power of ten; `round` is a defined integer operation | straightforward |
+| `allowed` | declarative constraints; ranges and membership become linear constraints | straightforward |
+| Pure mechanisms | a mechanism is a function from old state and input to new state | straightforward |
+| `sample` | a nondeterministic choice: the proof must hold for every outcome | moderate |
+| `float` | floating-point theory, or an approximation with stated error | hard |
+| Lists and maps | need quantifiers or bounded unrolling | hard |
+
+**Authorship.** The implementation is written entirely by hand. AI assistance is limited to documentation, brainstorming, review, and explanation (see `docs/decisions.md`, P1).
 
 ### Defaults (provisional)
 
-Every run has defaults chosen for the common case. Settings marked "settled" are already in the decided table below.
+Every run has defaults chosen for the common case. Settings marked "settled" are already in the decided tables below.
 
 | Setting | Default | To override |
 |---|---|---|
@@ -251,75 +298,96 @@ Every run has defaults chosen for the common case. Settings marked "settled" are
 
 ### Decided
 
+Each decision's alternatives, reasoning, costs, and revisit triggers are in `docs/decisions.md` (D1 to D10 so far). Rows without a D-number were settled earlier in the design discussion.
+
+**Scope and vocabulary**
+
 | Decision | Choice |
 |---|---|
 | Scope | A DSL for the model → experiment → results loop. Not general-purpose. |
 | Analysis | Export layer: Parquet/CSV for R and Python, Vega-Lite for charts. |
 | Vocabulary | The GDS paper's terms win over cadCAD's. There is no `policy` keyword. |
-| Step shape | A step has an optional `input:` stage, a step-level `allowed:`, and one `mechanism:`. |
-| Admissibility | `allowed` belongs to the step, because the paper defines the admissible input map separately from the input map. |
-| Mechanism form | One record of per-field expressions, all reading the old state. |
-| Unmentioned fields | A mechanism must account for every state field. A field it neither sets nor copies is a check error. `..s` copies all unmentioned fields from the old state, so the author acknowledges them as passthroughs. |
-| Input field independence | Input fields do not read each other. The admissible set is the product of per-field membership sets, filtered by joint predicates; any coupling between fields is an explicit predicate. |
-| NaN, infinity, division by zero | A NaN or infinite float result, or division by zero of any type, is an error that stops that job. The error is recorded with the step, field, and expression, and other jobs continue. There is no propagate mode. |
-| Integer division | `//` is floor division and `%` is floored modulo, so `a == (a // b) * b + a % b` and `%` takes the sign of the divisor. Plain `/` on two `int` values is a check error: use `//`, or convert to `decimal` or `float`. |
-| Relative tolerance | `a == b within p%` means `\|a - b\| <= p * max(\|a\|, \|b\|)`. It is symmetric (argument order does not matter), needs no division, and never makes a nonzero number equal to 0: use an absolute tolerance for "near zero". Tolerance equality is not transitive, so reachability needs a deterministic rule for merging near-equal states (open). |
-| Random numbers | xoshiro256++ seeded by SplitMix64 (job j uses `splitmix64(base ^ j)`); uniform floats `(next_u64 >> 11) * 2^-53`; Box–Muller for normal draws; a pinned pure-Rust math library, so a seed reproduces bit-for-bit across machines and across the VM and the oracle. |
-| Violating state | When an invariant fails, the violating state is recorded as the job's final row, flagged with the invariant's name, so it can be inspected. Other failures have no new state, so the last row is the previous state and the error record carries the offending state and input. |
-| Decimal arithmetic | `+` and `-` on `decimal(N)` are exact. `decimal(N) * decimal(M)` is exact and has type `decimal(N+M)`; `decimal(N) * int` stays `decimal(N)`. Storing a product back into a `decimal(N)` field needs `round(e, mode)`. `/` on decimals is legal only as the direct argument of `round`, so the rounding policy is always written down. |
-| Order of checks in a run | Invariants are checked on the initial state before step 1. `until` is tested before each step, so one that is already true does zero steps. Invariants are checked after each step. If a state violates an invariant and satisfies `until`, the violation wins. |
-| Authorship | The implementation is written entirely by hand. AI assistance is limited to documentation, brainstorming, review, and explanation (see `docs/decisions.md`, P1). |
-| Composition | `>>` joins steps only; each step takes the state in and returns it out. |
-| Evolving space | Stated explicitly: `system Thermostat: Room = ...` |
-| Simultaneous decisions | Several decisions in one step are fields of one input record. Joint rules go in the step-level `allowed`. Composing separate subsystems is deferred. |
-| Steps without choices | A step may omit `input:` entirely (the paper describes the input stage as optional). |
-| Step counting | `for N steps` applies the system N times, so a run records N+1 states including the initial one. |
-| Intermediate states | Rows between steps inside one system step are **not** recorded by default; recording them is opt-in (syntax provisional). |
-| Invariant violation | A violation stops that job and is recorded in the results (state, step, which invariant); other jobs in the same sweep continue. Continuing past a violation is opt-in per invariant (provisional: `keep running`). |
-| Number types | There is **no default numeric type**. Every numeric field declares `int`, `decimal`, or `float`. Literals take their type from context. Mixing numeric types is a type error. |
-| Float tolerance | There is **no default tolerance**. Any `==` or `!=` on floats needs a tolerance from `within` (per comparison) or a model-wide `tolerance` declaration; otherwise it is a check-time error. `<`, `>`, `<=`, `>=` never need one. `decimal` equality is exact unless `within` is given; `int` equality is always exact. Syntax provisional. |
-| Decimal precision | The number of places is part of the type: `decimal(N)` has exactly N places. `+` and `-` are exact. `*` and `/` must be rounded back explicitly with a stated mode (`down`, `up`, or `nearest`). |
-| Integer size | `int` is an arbitrary-precision mathematical integer; overflow does not exist. Implementations may use a fast small-integer path with a big-integer fallback. Range-refined integers (for example `type U256 = int in 0..2^256-1`), reusing the range form from `allowed`, are a planned later addition; a value outside its type's range is a run-time error. |
-| Declarations | `state` declares the one record that evolves (a GDS concept). `type` declares everything else: records, choices among named options, and aliases. There is no `space` or `record` keyword. |
-| Observables | `metric` records a value computed from the state at each step; `invariant` checks a true/false rule and stops the job when it fails. Both are pure functions of state. A metric may have any type (the author declares it). Neither is part of the formal GDS framework, and both are in scope as features of the simulation workflow. |
-| Recording | Every declared metric is recorded every step. The results table holds the full state plus the metrics by default; `record metrics only` is opt-in for large states. |
-| Metric export | Record-typed metrics flatten into dotted columns (for example `Pop.prey`). Choices export as categorical text. Lists and maps stay nested in Parquet and are serialized as JSON text in CSV. |
-| Step index | `step` is a built-in, readable in `input:` and `allowed:` expressions only (not in mechanisms or metrics). It counts the transition being computed, starting at 1. Results row k is the state after step k, and row 0 is the initial state. |
-| Replayed data | A `data` declaration loads outside series (for example a price file) and `input:` expressions index it by `step`. Running past the end of the data is an error, not a silent repeat. Syntax provisional. |
-| Periodic activation | Parts of a system that act at different frequencies are modeled with `step`, for example `if step % 3 == 0 then ... else 0`. Uneven or event-driven time is deferred. |
+| Syntax style | Standard typed annotations; keywords only for GDS concepts. |
 | Audience and vocabulary | The core language and main documentation are domain-neutral, with a deliberate mix of example families (games, economics and tokens, life sciences, physical control) so that no single field dominates. |
 | One vocabulary | Every audience ends up using the same GDS-derived terms (`state`, `input`, `mechanism`, `step`, `invariant`, and so on). Field-specific words (turn, block, generation) may appear once as an on-ramp in an audience guide, and are then retired in favor of the Roxin term. They never become keywords or aliases. |
 | Audience guides | Planned: one guide per field (for example video game developers, economics and tokenomics, life sciences), each covering the same ground in the same order with its own family of examples. A concept appears in all guides under the same name. |
-| Step index | A built-in `step` is readable in `input:` and `allowed:` expressions only, not in mechanisms or metrics. It counts the transition being applied, starting at 1: results row k is the state after step k, and row 0 is the initial state. Anything that depends on time enters the law of motion as an input. |
-| Replayed data | `data` declarations load files before the run; `input:` expressions index them by `step`. Running past the end of the data is an error, not a silent repeat. |
-| Time model | Uniform discrete steps. Periodic activation (an actor that acts every N steps) uses `step`. Uneven or event-driven time is deferred. |
-| State equality (reachability) | Two states are the same when all `int` and `decimal` fields match exactly and `float` fields match within the model's `tolerance`. Reachability on a model with float fields and no declared `tolerance` is an error. Near-equal states on opposite sides of a rounding boundary may fail to merge, which costs search size but never correctness. |
+
+**Model structure**
+
+| Decision | Choice |
+|---|---|
+| Declarations | `state` declares the one record that evolves (a GDS concept). `type` declares everything else: records, choices among named options, and aliases. There is no `space` or `record` keyword. |
+| System state type | Stated explicitly: `system Thermostat: Room = ...` |
+| Step shape | A step has an optional `input:` stage, a step-level `allowed:`, and one `mechanism:`. |
+| Steps without choices | A step may omit `input:` entirely (the paper describes the input stage as optional). |
+| Admissibility | `allowed` belongs to the step, because the paper defines the admissible input map separately from the input map. |
+| Mechanism form | One record of per-field expressions, all reading the old state. (D2) |
+| Unmentioned fields | A mechanism must account for every state field. A field it neither sets nor copies is a check error. `..s` copies all unmentioned fields from the old state, so the author acknowledges them as passthroughs. (D2) |
+| Input field independence | Input fields do not read each other. The admissible set is the product of per-field membership sets, filtered by joint predicates; any coupling between fields is an explicit predicate. (D3) |
+| Simultaneous decisions | Several decisions in one step are fields of one input record. Joint rules go in the step-level `allowed`. Composing separate subsystems is deferred. |
 | Decision swapping | Named `input map` forms can be replaced for A/B comparison. |
-| Syntax style | Standard typed annotations; keywords only for GDS concepts. |
+| Composition | `>>` joins steps only; each step takes the state in and returns it out. |
+
+**Time, running, and randomness**
+
+| Decision | Choice |
+|---|---|
+| Step counting | `for N steps` applies the system N times, so a run records N+1 states including the initial one. |
+| Intermediate states | Rows between steps inside one system step are **not** recorded by default; recording them is opt-in (`record substeps`, syntax provisional). |
+| Step index | A built-in `step` is readable in `input:` and `allowed:` expressions only, not in mechanisms or metrics. It counts the transition being computed, starting at 1: results row k is the state after step k, and row 0 is the initial state. Anything that depends on time enters the law of motion as an input. |
+| Time model | Uniform discrete steps. Periodic activation (an actor that acts every N steps) uses `step`, for example `if step % 3 == 0 then ... else 0`. Uneven or event-driven time is deferred. |
+| Replayed data | `data` declarations load outside series before the run (for example a price file); `input:` expressions index them by `step`. Running past the end of the data is an error, not a silent repeat. Syntax provisional. |
+| Order of checks in a run | Invariants are checked on the initial state before step 1. `until` is tested before each step, so one that is already true does zero steps. Invariants are checked after each step. If a state violates an invariant and satisfies `until`, the violation wins. (D10) |
+| Random numbers | xoshiro256++ seeded by SplitMix64 (job j uses `splitmix64(base ^ j)`); uniform floats `(next_u64 >> 11) * 2^-53`; Box–Muller for normal draws; a pinned pure-Rust math library, so a seed reproduces bit-for-bit across machines and across the VM and the oracle. (D7) |
+
+**Numbers**
+
+| Decision | Choice |
+|---|---|
+| Number types | There is **no default numeric type**. Every numeric field declares `int`, `decimal`, or `float`. Literals take their type from context. Mixing numeric types is a type error. |
+| Integer size | `int` is an arbitrary-precision mathematical integer; overflow does not exist. Implementations may use a fast small-integer path with a big-integer fallback. Range-refined integers (for example `type U256 = int in 0..2^256-1`), reusing the range form from `allowed`, are a planned later addition; a value outside its type's range is a run-time error. (D1) |
+| Integer division | `//` is floor division and `%` is floored modulo, so `a == (a // b) * b + a % b` and `%` takes the sign of the divisor. Plain `/` on two `int` values is a check error: use `//`, or convert to `decimal` or `float`. (D5) |
+| Decimal arithmetic | The number of places is part of the type: `decimal(N)` has exactly N places. `+` and `-` are exact. `decimal(N) * decimal(M)` is exact and has type `decimal(N+M)`; `decimal(N) * int` stays `decimal(N)`. Storing a product back into a `decimal(N)` field needs `round(e, mode)` with `down`, `up`, or `nearest`. `/` on decimals is legal only as the direct argument of `round`, so the rounding policy is always written down. (D9) |
+| Float tolerance | There is **no default tolerance**. Any `==` or `!=` on floats needs a tolerance from `within` (per comparison) or a model-wide `tolerance` declaration; otherwise it is a check-time error. `<`, `>`, `<=`, `>=` never need one. `decimal` equality is exact unless `within` is given; `int` equality is always exact. Syntax provisional. |
+| Relative tolerance | `a == b within p%` means `\|a - b\| <= p * max(\|a\|, \|b\|)`. It is symmetric (argument order does not matter), needs no division, and never makes a nonzero number equal to 0: use an absolute tolerance for "near zero". Tolerance equality is not transitive, so reachability needs a deterministic rule for merging near-equal states (open). (D6) |
+| NaN, infinity, division by zero | A NaN or infinite float result, or division by zero of any type, is an error that stops that job. The error is recorded with the step, field, and expression, and other jobs continue. There is no propagate mode. (D4) |
+| State equality (reachability) | Two states are the same when all `int` and `decimal` fields match exactly and `float` fields match within the model's `tolerance`. Reachability on a model with float fields and no declared `tolerance` is an error. Near-equal states on opposite sides of a rounding boundary may fail to merge, which costs search size but never correctness. |
+
+**Observables, results, and failure**
+
+| Decision | Choice |
+|---|---|
+| Observables | `metric` records a value computed from the state at each step; `invariant` checks a true/false rule and stops the job when it fails. Both are pure functions of state. A metric may have any type (the author declares it). Neither is part of the formal GDS framework, and both are in scope as features of the simulation workflow. |
+| Recording | Every declared metric is recorded every step. The results table holds the full state plus the metrics by default; `record metrics only` is opt-in for large states. |
+| Metric export | Record-typed metrics flatten into dotted columns (for example `Pop.prey`). Choices export as categorical text. Lists and maps stay nested in Parquet and are serialized as JSON text in CSV. |
+| Invariant violation | A violation stops that job; other jobs in the same sweep continue. The violating state is recorded as the job's final row, flagged with the invariant's name, so it can be inspected. Continuing past a violation is opt-in per invariant (provisional: `keep running`). Other failures (admissibility, arithmetic, data) create no new state, so the last row is the previous state and the error record carries the offending state and input. (D8) |
+
+**Implementation and process**
+
+| Decision | Choice |
+|---|---|
 | Build order | AST and semantics first. An s-expression reader comes early so programs can be typed into a REPL; the friendly surface syntax comes last, once the semantics are settled. |
 | Implementation | Written in Rust, with no Python implementation. A **bytecode compiler and VM** is the primary way to run programs. A small **tree-walking evaluator** is kept as a test oracle and a learning aid, not a product. Programs run on demand from the command line or an interactive **REPL**. |
 | Backends | The compiler is organized as front end → checker → typed IR → backend, so backends are modular. Only the bytecode VM is planned. Compiling to C or WebAssembly is deferred until real feedback from cadCAD users has been addressed. |
-| Testing | The hand-computed benchmark values are the fixed oracle. The VM and the tree-walker must agree on every benchmark; any later backend must agree too. |
+| Testing | The hand-computed benchmark values are the fixed oracle (checked independently with exact arithmetic). The VM and the tree-walker must agree on every benchmark; any later backend must agree too. |
 | Performance | Treated as a measured trigger, revisited throughout development. Measurements: time per step for one job (agent-based traders at 100, 1,000, and 10,000 agents), total time for a 1,000-job sweep on one core and on all cores, and a breakdown of where time goes. Thresholds are set once the VM runs. Benchmarks are mainly comparisons against the same models implemented in cadCAD (original) and cadCAD.jl. Escalation order: parallel jobs, in-place state updates, a faster backend, then a JIT. |
 | `extern` (foreign code) | Deferred. Placeholder rules below. |
 | Data connectors | Closed menu: CSV, Parquet, SQLite, HTTP GET. Effects only in `data` declarations and `input:` stages. |
+| Authorship | The implementation is written entirely by hand; AI is used for documentation, brainstorming, review, and explanation only (P1 in `docs/decisions.md`). |
 
 ### Current leans (not yet confirmed)
 
 | Topic | Lean |
 |---|---|
-| Type equality of spaces | Exact structural (same field names and types). Width subtyping and row polymorphism later. |
+| Type equality of states and records | Exact structural (same field names and types). Width subtyping and row polymorphism later. |
 | Purity | Mechanisms must be pure and the checker verifies it. `input:` expressions may `sample`. |
 | `allowed` form | Set expressions (ranges, finite sets, products, filters), so they can be both checked and enumerated. Checked at runtime in v1. |
 | Reachability | Enumerates the `allowed` set and ignores the input expressions, so no branching happens inside user code. |
-| Handlers | Simulate(seed): run the input expressions, then check `allowed`. Enumerate(depth): iterate `allowed`. Override: swap in a named `input map`. |
-| Substeps | Every step maps state to state, as in the cadCAD specification. |
 | Results | Parameters, job index, and seed attached as columns; per-step timing built in. |
+| Self-describing results | Results record the effective settings used (seed, tolerance, step counting), so a results file describes how it was produced. |
 | Checking | A pre-run checker for wiring, types, and mechanism purity. Admissibility and invariants checked at runtime. |
 | Expression language | Small and pure: records, lists, maps, `if` as an expression, `map`/`filter`/`fold`. Termination as an opt-in guarantee. |
 | Parameters | A per-job record. Time-varying parameters live in the state explicitly. |
-| Run termination | Maximum steps plus an absorbing-state test. |
-| Self-describing results | Results record the effective settings used (seed, tolerance, step counting), so a results file describes how it was produced. |
 | Global state | None. An experiment is a value, not an entry in a global registry. |
 
 ### The `extern` placeholder rules
@@ -352,9 +420,10 @@ If a real model needs foreign code, the first candidate is WebAssembly for pure 
 ## Documentation plan
 
 - **Core reference and tutorial:** domain-neutral, using a balanced mix of examples. The thermostat, marbles, predator–prey, SIR, and market models already span control, games, biology, and economics. A rough guard: no field supplies more than about a third of the examples in the core docs.
-- **Audience guides:** same chapters, same order, same terms, different example families. The test for a guide is that a model written from one guide is readable by someone who learned from another.
+- **Audience guides:** same chapters, same order, same terms, different example families. The test for a guide is that a model written from one guide is readable by someone who learned from another. The guides must say plainly that unbounded `int` can diverge from a real contract at overflow boundaries, and show how to state the bound as an invariant (for example `invariant NoOverflow(s: Pool) = s.balance < 2^256`).
 - **Terminology rule:** a guide may introduce a concept through a familiar word once, then switches to the Roxin term for good. Roxin ships no domain aliases.
 - **Defaults reference:** every default listed in one page (see the defaults table), kept in sync with the implementation.
+- **Decision log:** `docs/decisions.md` records every decision with its alternatives and reasoning; new decisions are appended, and changes are added as dated notes, never silent edits.
 
 ---
 
@@ -362,7 +431,7 @@ If a real model needs foreign code, the first candidate is WebAssembly for pure 
 
 | Milestone | Build | Done when |
 |---|---|---|
-| M0 | Review `docs/core-semantics.md` and settle its decisions D1–D10; settle the questions in Open Questions at the end; collect 3–5 real models from GDS practitioners | choices are written down |
+| M0 | Read through `docs/core-semantics.md` (its decisions D1–D10 are settled); settle the questions in Open Questions at the end; collect 3–5 real models from GDS practitioners | the draft has been reviewed and the real models are in hand |
 | M1 | Rust project, AST, and a tree-walking evaluator for one step (the oracle) | the thermostat with k = 0.5 goes `10 → 15 → 17.5 → 18.75` |
 | M2 | Trajectory loop, stop rule, output table; s-expression reader and a minimal REPL | all three k values match the closed-form values below; predator–prey holds still at equilibrium; the marbles model reaches `(5,5)`; a model can be typed into the REPL |
 | M3 | Typed IR and a bytecode compiler and VM | every M1–M2 benchmark gives identical results on the VM and the tree-walker |
@@ -383,16 +452,16 @@ The VM becomes the primary engine at M3. The tree-walker stays as the oracle. Ba
 4. **Linear bonding curve** (exact conservation and lossless round trips)
 5. **SIR epidemic** (conservation of S + I + R)
 6. **Agent-based traders** (performance at 100, 1,000, and 10,000 agents)
-7. **Robot arms and marbles** (periodic activation; from the cadCAD tutorials). By hand: the state after steps 0 to 10 is `(10,0)`, `(10,0)`, `(9,1)`, `(8,2)`, `(7,3)`, `(7,3)`, then `(5,5)` from step 6 onward, with `box_a + box_b == 10` throughout.
+7. **Robot arms and marbles** (periodic activation; from the cadCAD tutorials). The state after steps 0 to 10 is `(10,0)`, `(10,0)`, `(9,1)`, `(8,2)`, `(7,3)`, `(7,3)`, then `(5,5)` from step 6 onward, with `box_a + box_b == 10` throughout.
 
-Expected values were computed by hand. Treat them as unverified until an implementation reproduces them. The thermostat values assume "8 steps" means 8 applications of the system.
+Expected values were computed independently with exact arithmetic, not by a Roxin implementation, and are listed with more models in `docs/core-semantics.md`. The thermostat values assume "8 steps" means 8 applications of the system.
 
 ---
 
 ## Risks
 
 - **Scope creep** toward general-purpose or analysis tooling. The biggest risk.
-- **Unwritten semantics** causing endless syntax churn. Mitigation: write the formal core first.
+- **Unwritten semantics** causing endless syntax churn. Mitigation: write the formal core first (drafted in `docs/core-semantics.md`).
 - **Floating-point rounding** silently breaking invariant checks.
 - **State explosion** in reachability, especially with joint `allowed` sets over several fields.
 - **VM speed** on large agent-based models. Mitigation: parallel jobs first, then a faster backend only if measured timings justify it.
@@ -401,28 +470,30 @@ Expected values were computed by hand. Treat them as unverified until an impleme
 - **Adoption:** the cadCAD community faded, so the niche may be small. The project's value does not depend on adoption, but its direction might.
 - **Partial evidence base:** only part of the cadCAD demo repository was reviewed (see below).
 
----
-
-## Known gaps in the design notes
+### Known gaps in the design notes
 
 - Parts II and III of the GDS paper series, the Rust and Julia implementations, and Roxin's original papers have not been read.
 - Of the cadCAD demos, only the repository README, an older networks tutorial notebook, and tutorial part 3 (periodic activation) were read. The Uniswap, bonding curve, adoption funnel, and three-sided market notebooks were not.
 - Syntax for experiments, A/B variants, sweeps, and data declarations is a sketch.
 - The result store, parallel runtime, and checkpointing are described but not specified.
+- Reachability's rule for merging near-equal float states is undecided (see Relative tolerance).
 
 ---
 
 ## References
 
-- `docs/decisions.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D10)
-- `docs/core-semantics.md`: draft precise semantics, decisions D1–D10, and verified test vectors
+**In this repository**
+
+- `docs/decisions.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D10 and project policy P1)
+- `docs/core-semantics.md`: draft precise semantics and verified test vectors
+
+**External**
 
 - Zargham & Shorish, *Generalized Dynamical Systems Part I: Foundations* (2022): <https://research.wu.ac.at/ws/portalfiles/portal/23782375/Zargham_Shorish_GDS_Part_I_Foundations_2022.pdf>
 - cadCAD formal specification and reference implementation (`cadCAD-org/spec`, `cadCAD-org/cadcad-ri`) and tutorials (`cadCAD-org/demos`)
 - Roxin, E. (1965), *On Generalized Dynamical Systems Defined by Contingent Equations*, Journal of Differential Equations, vol. 1
 - Nystrom, *Crafting Interpreters*: <https://craftinginterpreters.com>
 - Pierce, *Types and Programming Languages* (records, subtyping)
-- Pretnar, *An Introduction to Algebraic Effects and Handlers* (2015)
 - Lamport, *Specifying Systems* (TLA+; closest existing practice to reachability plus invariants)
 
 ---
@@ -435,7 +506,7 @@ Not yet chosen.
 
 ## Open Questions
 
-Resolved questions are recorded in the decided table above and removed from this list. Questions are worked through in order.
+Resolved questions are recorded in the decided tables above and removed from this list. Questions are worked through in order.
 
 | # | Question | Why it matters |
 |---|---|---|
