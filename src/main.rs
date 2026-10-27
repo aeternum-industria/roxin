@@ -1,15 +1,15 @@
-use std::io;
-
 fn repl() {
-    println!("roxin> ");
+    println!("repl");
+}
 
-    let mut line = String::new();
-
-    let result = io::stdin().read_line(&mut line);
-
-    println!("{:?}", result);
+fn readfile() {
+    println!("readfile");
 }
 
 fn main() {
-    repl();
+    if true == false {
+        readfile();
+    } else {
+        repl();
+    }
 }

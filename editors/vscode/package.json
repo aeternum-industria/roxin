@@ -1,0 +1,26 @@
+{
+  "name": "roxin",
+  "displayName": "Roxin",
+  "description": "Syntax highlighting for Roxin (.rox) models",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": { "vscode": "^1.60.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "roxin",
+        "aliases": ["Roxin", "roxin"],
+        "extensions": [".rox"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "roxin",
+        "scopeName": "source.roxin",
+        "path": "./syntaxes/roxin.tmLanguage.json"
+      }
+    ]
+  }
+}
