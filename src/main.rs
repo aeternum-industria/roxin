@@ -1,15 +1,27 @@
-fn repl() {
-    println!("repl");
-}
+use std::path::PathBuf;
 
-fn readfile() {
-    println!("readfile");
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "roxin",
+    version,
+    about = "The Roxin interpreter and REPL",
+    disable_help_flag = false,
+    disable_version_flag = false
+)]
+
+struct Args {
+    #[arg(value_name = "SOURCEFILE")]
+    source_file: Option<PathBuf>,
 }
 
 fn main() {
-    if true == false {
-        readfile();
+    let args = Args::parse();
+
+    if let Some(path) = args.source_file {
+        println!("Interpreting: {}", path.display());
     } else {
-        repl();
+        println!("Roxin REPL");
     }
 }
