@@ -499,8 +499,9 @@ Expected values were computed independently with exact arithmetic, not by a Roxi
 ---
 
 ## License
+Offered under BSD 2-Clause.
 
-Not yet chosen.
+See [LICENSE](LICENSE).
 
 ---
 
