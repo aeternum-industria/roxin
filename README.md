@@ -1,4 +1,4 @@
-# Roxin
+# <img src="assets/roxin-logo.svg" width="24" height="24" /> Roxin
 
 A domain-specific language for modeling, simulating, and checking **generalized dynamical systems** (GDS).
 
