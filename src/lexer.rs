@@ -41,7 +41,7 @@ fn keyword(word: &str) -> Option<TokenKind> {
         "step" => Step,
         "steps" => Steps,
         "substeps" => Substeps,
-        "sweet" => Sweep,
+        "sweep" => Sweep,
         "system" => System,
         "then" => Then,
         "tolerance" => Tolerance,
@@ -78,6 +78,10 @@ impl<'src> Lexer<'src> {
         self.bytes.get(self.pos + n).copied()
     }
 
+    fn peek_char(&self) -> Option<char> {
+        self.src[self.pos..].chars().next()
+    }
+
     fn skip_trivia(&mut self) -> bool {
         let before = self.pos;
         loop {
@@ -96,12 +100,6 @@ impl<'src> Lexer<'src> {
         self.pos > before
     }
 
-    fn eat_digits(&mut self) {
-        while matches!(self.peek(), Some(b'0'..=b'9')) {
-            self.pos += 1;
-        }
-    }
-
     fn ident_or_keyword(&mut self, start: usize) -> TokenKind {
         while matches!(
             self.peek(),
@@ -110,7 +108,38 @@ impl<'src> Lexer<'src> {
             self.pos += 1;
         }
 
+        if let Some(ch) = self.peek_char() {
+            if !ch.is_ascii() && ch.is_alphanumeric() {
+                self.eat_word();
+                return TokenKind::Error(LexError::NonAsciiIdentifier);
+            }
+        }
+
         keyword(&self.src[start..self.pos]).unwrap_or(TokenKind::Ident)
+    }
+
+    fn eat_word(&mut self) {
+        while let Some(ch) = self.peek_char() {
+            if ch == '_' || ch.is_alphanumeric() {
+                self.pos += ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn eat_digits(&mut self) {
+        loop {
+            while matches!(self.peek(), Some(b'0'..=b'9')) {
+                self.pos += 1;
+            }
+
+            if self.peek() == Some(b'_') && matches!(self.peek_at(1), Some(b'0'..=b'9')) {
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
     }
 
     fn number(&mut self) -> TokenKind {
@@ -129,6 +158,12 @@ impl<'src> Lexer<'src> {
         }
 
         if matches!(self.peek(), Some(b'a'..=b'z' | b'A'..=b'Z' | b'_')) {
+            let error = if self.peek() == Some(b'_') {
+                LexError::MisplacedUnderscore
+            } else {
+                LexError::NumberGluedToLetters
+            };
+
             while matches!(
                 self.peek(),
                 Some(b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_')
@@ -136,26 +171,37 @@ impl<'src> Lexer<'src> {
                 self.pos += 1;
             }
 
-            return TokenKind::Error(LexError::NumberGluedToLetters);
+            return TokenKind::Error(error);
         }
 
         TokenKind::Number
     }
 
     fn string(&mut self) -> TokenKind {
-        self.pos += 1;
+        self.pos += 1; // I keep forgetting why we do this but its for the opening quote
+
+        let mut invalid_escape = false;
 
         loop {
             match self.peek() {
                 None | Some(b'\n') => return TokenKind::Error(LexError::UnterminatedString),
                 Some(b'"') => {
                     self.pos += 1;
-                    return TokenKind::Str;
+                    return if invalid_escape {
+                        TokenKind::Error(LexError::InvalidEscape)
+                    } else {
+                        TokenKind::Str
+                    };
                 }
                 Some(b'\\') => {
                     self.pos += 1;
-                    if !matches!(self.peek(), None | Some(b'\n')) {
-                        self.pos += 1;
+                    match self.peek() {
+                        Some(b'"' | b'\\' | b'n' | b't') => self.pos += 1,
+                        None | Some(b'\n') => {}
+                        Some(_) => {
+                            invalid_escape = true;
+                            self.pos += 1;
+                        }
                     }
                 }
                 Some(_) => self.pos += 1,
@@ -197,7 +243,11 @@ impl<'src> Lexer<'src> {
             (b'{', _) => (LBrace, 1),
             (b'}', _) => (RBrace, 1),
             _ => {
-                let ch = self.src[self.pos..].chars().next().unwrap();
+                let ch = self.peek_char().unwrap();
+                if !ch.is_ascii() && ch.is_alphanumeric() {
+                    self.eat_word();
+                    return Error(LexError::NonAsciiIdentifier);
+                }
                 self.pos += ch.len_utf8();
                 return Error(LexError::UnexpectedChar);
             }

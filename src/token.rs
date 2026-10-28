@@ -1,14 +1,35 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
+pub enum LexError {
+    InvalidEscape,
+    MisplacedUnderscore,
+    NonAsciiIdentifier,
+    NumberGluedToLetters,
+    UnexpectedChar,
+    UnterminatedString,
+}
+
+impl std::fmt::Display for LexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            LexError::InvalidEscape => "unexpected character",
+            LexError::MisplacedUnderscore => "string is missing its closing quote",
+            LexError::NonAsciiIdentifier => "a number cannot be followed directly by letters",
+            LexError::NumberGluedToLetters => {
+                "an underscore in a number must sit between two digits"
+            }
+            LexError::UnexpectedChar => "invalid escape in string (allowed: \\\", \\\\, \\n, \\t)",
+            LexError::UnterminatedString => {
+                "names can only use ASCII letters, digits, and underscore for now"
+            }
+        };
+        write!(f, "{msg}")
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LexError {
-    UnexpectedChar,
-    UnterminatedString,
-    NumberGluedToLetters,
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
