@@ -20,6 +20,12 @@ struct Args {
     source_file: Option<PathBuf>,
 }
 
+fn print_lexer_results(source: &str) {
+    for token in Lexer::new(source) {
+        println!("{:?} <{:?}>", token.text(source), token.kind);
+    }
+}
+
 fn repl() {
     loop {
         let mut exp: String = String::new();
@@ -34,17 +40,17 @@ fn repl() {
 
         if exp.trim() == quit {
             break;
-        } // TODO: Lex
+        } else {
+            print_lexer_results(&exp);
+        }
     }
 }
 
 fn read_file(path: PathBuf) {
     match fs::read_to_string(path) {
         Ok(content) => {
-            for token in Lexer::new(&content) {
-                println!("{:?} {:?}", token.kind, token.text(&content));
-            }
-        } // TODO: Lex
+            print_lexer_results(&content);
+        }
         Err(error) => eprintln!("Error reading source file: {}", error),
     }
 }
