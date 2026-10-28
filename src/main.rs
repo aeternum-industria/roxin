@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
+use roxin::lexer::Lexer;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "roxin",
@@ -38,7 +40,11 @@ fn repl() {
 
 fn read_file(path: PathBuf) {
     match fs::read_to_string(path) {
-        Ok(content) => println!("{}", content), // TODO: Lex
+        Ok(content) => {
+            for token in Lexer::new(&content) {
+                println!("{:?} {:?}", token.kind, token.text(&content));
+            }
+        } // TODO: Lex
         Err(error) => eprintln!("Error reading source file: {}", error),
     }
 }

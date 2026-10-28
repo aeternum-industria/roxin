@@ -1,1 +1,118 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LexError {
+    UnexpectedChar,
+    UnterminatedString,
+    NumberGluedToLetters,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TokenKind {
+    Allowed,
+    And,
+    Arrow,
+    Assume,
+    BangEq,
+    Bool,
+    Caret,
+    Colon,
+    Comma,
+    Compose,
+    Data,
+    Decimal,
+    Dot,
+    DotDot,
+    Else,
+    Every,
+    Export,
+    Extern,
+    Eq,
+    EqEq,
+    False,
+    Float,
+    For,
+    From,
+    Gt,
+    GtEq,
+    Ident,
+    If,
+    In,
+    Int,
+    Input,
+    Invariant,
+    Keep,
+    Lemma,
+    LBrace,
+    LBracket,
+    Let,
+    LParen,
+    Lt,
+    LtEq,
+    Map,
+    Match,
+    Mechanism,
+    Metric,
+    Minus,
+    NewLine,
+    Not,
+    Number,
+    Or,
+    Param,
+    Percent,
+    Pipe,
+    Plus,
+    RBrace,
+    RBracket,
+    Reach,
+    Record,
+    RParen,
+    Run,
+    Running,
+    Runs,
+    Seed,
+    Slash,
+    SlashSlash,
+    Str,
+    Star,
+    State,
+    Step,
+    Steps,
+    String,
+    Substep,
+    Substeps,
+    Sweep,
+    System,
+    Text,
+    Then,
+    Tolerance,
+    True,
+    Type,
+    TyBool,
+    TyDecimal,
+    TyFloat,
+    TyInt,
+    Unique,
+    Until,
+    Verbose,
+    Within,
+
+    Error(LexError),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: Span,
+    pub space_before: bool,
+}
+
+impl Token {
+    pub fn text<'a>(&self, src: &'a str) -> &'a str {
+        &src[self.span.start..self.span.end]
+    }
+}
