@@ -23,7 +23,7 @@ fn repl() {
         let mut exp: String = String::new();
         let quit: String = String::from("quit");
 
-        print!("> ");
+        print!("roxin -> ");
 
         io::stdout().flush().unwrap();
         io::stdin()
