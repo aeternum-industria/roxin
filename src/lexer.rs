@@ -89,7 +89,7 @@ impl<'src> Lexer<'src> {
         self.pos > before
     }
 
-    fn ident_or_keyword(&mut self, start: usize) -> TokenKind {
+    fn identifier_or_keyword(&mut self, start: usize) -> TokenKind {
         while matches!(
             self.peek(),
             Some(b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_')
@@ -104,7 +104,7 @@ impl<'src> Lexer<'src> {
             }
         }
 
-        keyword(&self.src[start..self.pos]).unwrap_or(TokenKind::Ident)
+        keyword(&self.src[start..self.pos]).unwrap_or(TokenKind::Identifier)
     }
 
     fn eat_word(&mut self) {
@@ -258,7 +258,7 @@ impl<'src> Iterator for Lexer<'src> {
                 self.pos += 1;
                 TokenKind::NewLine
             }
-            b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.ident_or_keyword(start),
+            b'a'..=b'z' | b'A'..=b'Z' | b'_' => self.identifier_or_keyword(start),
             b'0'..=b'9' => self.number(),
             b'"' => self.string(),
             _ => self.operator(),

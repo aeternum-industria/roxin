@@ -1,9 +1,12 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LexError {
+    BadIndent,
+    IndentTooDeep,
     InvalidEscape,
     MisplacedUnderscore,
     NonAsciiIdentifier,
     NumberGluedToLetters,
+    TabInIndent,
     UnexpectedChar,
     UnterminatedString,
 }
@@ -11,12 +14,15 @@ pub enum LexError {
 impl std::fmt::Display for LexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
+            LexError::BadIndent => "indentation must be a multiple of four (4) spaces",
+            LexError::IndentTooDeep => "indented more than one level deeper than the line above",
             LexError::InvalidEscape => "unexpected character",
             LexError::MisplacedUnderscore => "string is missing its closing quote",
             LexError::NonAsciiIdentifier => "a number cannot be followed directly by letters",
             LexError::NumberGluedToLetters => {
                 "an underscore in a number must sit between two digits"
             }
+            LexError::TabInIndent => "tabs are not allowed in indentation; use four (4) spaces",
             LexError::UnexpectedChar => "invalid escape in string (allowed: \\\", \\\\, \\n, \\t)",
             LexError::UnterminatedString => {
                 "names can only use ASCII letters, digits, and underscore for now"
@@ -46,6 +52,7 @@ pub enum TokenKind {
     Compose,
     Data,
     Decimal,
+    Dedent,
     Dot,
     DotDot,
     Else,
@@ -58,9 +65,10 @@ pub enum TokenKind {
     From,
     Gt,
     GtEq,
-    Ident,
+    Identifier,
     If,
     In,
+    Indent,
     Int,
     Input,
     Invariant,

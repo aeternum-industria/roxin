@@ -4,7 +4,8 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use roxin::lexer::Lexer;
+use roxin::layout::Layout;
+use roxin::token::Token;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -20,10 +21,15 @@ struct Args {
     source_file: Option<PathBuf>,
 }
 
-fn print_lexer_results(source: &str) {
-    for token in Lexer::new(source) {
-        println!("{:?} <{:?}>", token.text(source), token.kind);
+fn print_layout_results(source: &str) {
+    for token in Layout::new(source) {
+        print_token(source, &token);
     }
+}
+
+fn print_token(source: &str, token: &Token) {
+    let text = &source[token.span.start..token.span.end];
+    println!("{:?} <{:?}>", text, token.kind);
 }
 
 fn repl() {
@@ -41,7 +47,7 @@ fn repl() {
         if exp.trim() == quit {
             break;
         } else {
-            print_lexer_results(&exp);
+            print_layout_results(&exp);
         }
     }
 }
@@ -49,7 +55,7 @@ fn repl() {
 fn read_file(path: PathBuf) {
     match fs::read_to_string(path) {
         Ok(content) => {
-            print_lexer_results(&content);
+            print_layout_results(&content);
         }
         Err(error) => eprintln!("Error reading source file: {}", error),
     }
