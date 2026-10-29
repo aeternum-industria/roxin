@@ -1,4 +1,6 @@
-use crate::ast::{BinOp, Expr, Field, Item, Module, Name, ParamDecl, StateDecl, TypeExpr, UnOp};
+use crate::ast::{
+    BinOp, Expr, Field, Item, Module, Name, ParamDecl, StateDecl, SystemDecl, TypeExpr, UnOp,
+};
 use crate::layout::Layout;
 use crate::token::{Span, Token, TokenKind};
 
@@ -176,13 +178,14 @@ impl<'src> Parser<'src> {
         Ok(Field { name, ty })
     }
 
-    /// MODULE -> ITEM*  ITEM -> PARAM | STATE
+    /// MODULE -> ITEM*  ITEM -> PARAM | STATE | SYSTEM
     fn parse_module(&mut self) -> Result<Module, ParseError> {
         let mut items = Vec::new();
         while let Some(kind) = self.peek() {
             let item = match kind {
                 TokenKind::Param => Item::Param(self.parse_param()?),
                 TokenKind::State => Item::State(self.parse_state()?),
+                TokenKind::System => Item::System(self.parse_system()?),
                 _ => {
                     return Err(self.error_here(format!(
                         "expected a declaration, found {}",
@@ -263,6 +266,23 @@ impl<'src> Parser<'src> {
                 self.describe_current()
             ))),
         }
+    }
+
+    /// SYSTEM -> "system" NAME ":" NAME "=" NAME (">>" NAME)* NEWLINE
+    fn parse_system(&mut self) -> Result<SystemDecl, ParseError> {
+        self.expect(TokenKind::System, "`system`")?;
+        let name = self.parse_name("a system name")?;
+        self.expect(TokenKind::Colon, "`:` after the system name")?;
+        let state = self.parse_name("a state type name")?;
+        self.expect(TokenKind::Eq, "`=` followed by the steps")?;
+        let mut steps = vec![self.parse_name("a step name")?];
+
+        while self.eat(TokenKind::Compose) {
+            steps.push(self.parse_name("a step name after `>>`")?);
+        }
+
+        self.expect(TokenKind::NewLine, "end of line")?;
+        Ok(SystemDecl { name, state, steps })
     }
 }
 

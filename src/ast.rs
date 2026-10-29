@@ -1,17 +1,6 @@
 use crate::token::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module {
-    pub items: Vec<Item>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Item {
-    Param(ParamDecl),
-    State(StateDecl),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeError {
     Bool,
     Decimal,
@@ -31,6 +20,25 @@ pub struct ParamDecl {
 pub struct StateDecl {
     pub name: Name,
     pub fields: Vec<Field>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SystemDecl {
+    pub name: Name,
+    pub state: Name,
+    pub steps: Vec<Name>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Item {
+    Param(ParamDecl),
+    State(StateDecl),
+    System(SystemDecl),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Module {
+    pub items: Vec<Item>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
