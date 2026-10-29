@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 use roxin::layout::Layout;
+use roxin::parser::parse;
 use roxin::token::Token;
 
 #[derive(Parser, Debug)]
@@ -32,6 +33,26 @@ fn print_token(source: &str, token: &Token) {
     println!("{:?} <{:?}>", text, token.kind);
 }
 
+fn print_parse_results(source: &str) {
+    match parse(source) {
+        Ok(module) => println!("{module:#?}"),
+        Err(e) => {
+            let (line, col) = line_col(source, e.span.start);
+            eprintln!("error at line {line}, column {col}: {}", e.message);
+        }
+    }
+}
+
+fn line_col(source: &str, offset: usize) -> (usize, usize) {
+    let before = &source[..offset.min(source.len())];
+    let line = before.matches('\n').count() + 1;
+    let col = before
+        .rfind('\n')
+        .map_or(before.len(), |i| before.len() - i - 1)
+        + 1;
+    (line, col)
+}
+
 fn repl() {
     loop {
         let mut exp: String = String::new();
@@ -48,6 +69,7 @@ fn repl() {
             break;
         } else {
             print_layout_results(&exp);
+            print_parse_results(&exp);
         }
     }
 }
@@ -56,6 +78,7 @@ fn read_file(path: PathBuf) {
     match fs::read_to_string(path) {
         Ok(content) => {
             print_layout_results(&content);
+            print_parse_results(&content);
         }
         Err(error) => eprintln!("Error reading source file: {}", error),
     }
