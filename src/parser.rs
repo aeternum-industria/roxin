@@ -101,6 +101,20 @@ impl<'src> Parser<'src> {
     fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_expr_prefix()?;
         loop {
+            if self.at(TokenKind::Dot) {
+                if POSTFIX_BP < min_bp {
+                    break;
+                }
+
+                self.advance();
+                let field = self.parse_name("a field name after `.`")?;
+                lhs = Expr::FieldAccess {
+                    base: Box::new(lhs),
+                    field,
+                };
+                continue;
+            }
+
             let Some(kind) = self.peek() else { break };
             let Some((op, left_bp, right_bp)) = binary_op(kind) else {
                 break;
@@ -257,6 +271,7 @@ pub fn parse(src: &str) -> Result<Module, ParseError> {
 }
 
 const PREFIX_BP: u8 = 25;
+const POSTFIX_BP: u8 = 40;
 
 fn binary_op(kind: TokenKind) -> Option<(BinOp, u8, u8)> {
     Some(match kind {

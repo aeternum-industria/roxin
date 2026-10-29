@@ -56,6 +56,10 @@ pub enum Expr {
         op_span: Span,
         operand: Box<Expr>,
     },
+    FieldAccess {
+        base: Box<Expr>,
+        field: Name,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,6 +107,10 @@ impl Expr {
             Expr::Binary { lhs, rhs, .. } => Span {
                 start: lhs.span().start,
                 end: rhs.span().end,
+            },
+            Expr::FieldAccess { base, field } => Span {
+                start: base.span().start,
+                end: field.span.end,
             },
         }
     }
