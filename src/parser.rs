@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Field, Name, ParamDecl, StateDecl, TypeExpr};
+use crate::ast::{Expr, Field, Item, Module, Name, ParamDecl, StateDecl, TypeExpr};
 use crate::layout::Layout;
 use crate::token::{Span, Token, TokenKind};
 
@@ -110,6 +110,27 @@ impl<'src> Parser<'src> {
         Ok(Field { name, ty })
     }
 
+    /// MODULE -> ITEM*  ITEM -> PARAM | STATE
+    fn parse_module(&mut self) -> Result<Module, ParseError> {
+        let mut items = Vec::new();
+        while let Some(kind) = self.peek() {
+            let item = match kind {
+                TokenKind::Param => Item::Param(self.parse_param()?),
+                TokenKind::State => Item::State(self.parse_state()?),
+                _ => {
+                    return Err(self.error_here(format!(
+                        "expected a declaration, found {}",
+                        self.describe_current()
+                    )));
+                }
+            };
+
+            items.push(item);
+        }
+
+        Ok(Module { items })
+    }
+
     /// NAME -> Identifier
     fn parse_name(&mut self, what: &str) -> Result<Name, ParseError> {
         let token = self.expect(TokenKind::Identifier, what)?;
@@ -177,4 +198,8 @@ impl<'src> Parser<'src> {
             ))),
         }
     }
+}
+
+pub fn parse(src: &str) -> Result<Module, ParseError> {
+    Parser::new(src).parse_module()
 }
