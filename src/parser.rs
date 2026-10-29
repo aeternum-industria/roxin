@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Field, Item, Module, Name, ParamDecl, StateDecl, TypeExpr};
+use crate::ast::{BinOp, Expr, Field, Item, Module, Name, ParamDecl, StateDecl, TypeExpr, UnOp};
 use crate::layout::Layout;
 use crate::token::{Span, Token, TokenKind};
 
@@ -93,13 +93,65 @@ impl<'src> Parser<'src> {
         }
     }
 
-    /// EXPR -> Number (for the moment)
+    /// EXPR -> any expression (see `parse_expr_bp`)
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        let token = self.expect(TokenKind::Number, "a number")?;
-        Ok(Expr::Number {
-            span: token.span,
-            text: self.text(token).to_string(),
-        })
+        self.parse_expr_bp(0)
+    }
+
+    fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_expr_prefix()?;
+        loop {
+            let Some(kind) = self.peek() else { break };
+            let Some((op, left_bp, right_bp)) = binary_op(kind) else {
+                break;
+            };
+            if left_bp > min_bp {
+                break;
+            }
+
+            self.advance();
+
+            let rhs = self.parse_expr_bp(right_bp)?;
+            lhs = Expr::Binary {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            };
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_expr_prefix(&mut self) -> Result<Expr, ParseError> {
+        match self.peek() {
+            Some(TokenKind::Number) => {
+                let token = self.expect(TokenKind::Number, "a number")?;
+                Ok(Expr::Number {
+                    span: token.span,
+                    text: self.text(token).to_string(),
+                })
+            }
+            Some(TokenKind::Identifier) => Ok(Expr::Name(self.parse_name("a name")?)),
+            Some(TokenKind::LParen) => {
+                self.advance();
+                let inner = self.parse_expr_bp(0)?;
+                self.expect(TokenKind::RParen, "`)` to close the parenthesis")?;
+                Ok(inner)
+            }
+            Some(TokenKind::Minus) => {
+                let op_token = self.expect(TokenKind::Minus, "`-`")?;
+                let operand = self.parse_expr_bp(PREFIX_BP)?;
+                Ok(Expr::Unary {
+                    op: UnOp::Neg,
+                    op_span: op_token.span,
+                    operand: Box::new(operand),
+                })
+            }
+            _ => Err(self.error_here(format!(
+                "expected an expression, found {}",
+                self.describe_current()
+            ))),
+        }
     }
 
     /// FIELD -> NAME ":" TYPE
@@ -202,4 +254,19 @@ impl<'src> Parser<'src> {
 
 pub fn parse(src: &str) -> Result<Module, ParseError> {
     Parser::new(src).parse_module()
+}
+
+const PREFIX_BP: u8 = 25;
+
+fn binary_op(kind: TokenKind) -> Option<(BinOp, u8, u8)> {
+    Some(match kind {
+        TokenKind::Plus => (BinOp::Add, 10, 11),
+        TokenKind::Minus => (BinOp::Sub, 10, 11),
+        TokenKind::Star => (BinOp::Mul, 20, 21),
+        TokenKind::Slash => (BinOp::Div, 20, 21),
+        TokenKind::SlashSlash => (BinOp::FloorDiv, 20, 21),
+        TokenKind::Percent => (BinOp::Rem, 20, 21),
+        TokenKind::Caret => (BinOp::Pow, 31, 30),
+        _ => return None,
+    })
 }

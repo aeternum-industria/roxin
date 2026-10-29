@@ -8,7 +8,7 @@ pub struct Module {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item {
     Param(ParamDecl),
-    State(StateDecl), // Here we fuckin' go! Let's start small cause I don't know what I'm doing...
+    State(StateDecl),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,7 +17,7 @@ pub enum TypeError {
     Decimal,
     Float,
     Int,
-    Named(Name), // State types
+    Named(Name),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,7 +41,21 @@ pub struct Field {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-    Number { text: String, span: Span }, // Again, starting small. Baby steps.
+    Number {
+        text: String,
+        span: Span,
+    },
+    Name(Name),
+    Binary {
+        op: BinOp,
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+    },
+    Unary {
+        op: UnOp,
+        op_span: Span,
+        operand: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,4 +71,39 @@ pub enum TypeExpr {
 pub struct Name {
     pub text: String,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    FloorDiv,
+    Rem,
+    Pow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnOp {
+    Neg,
+}
+
+impl Expr {
+    pub fn span(&self) -> Span {
+        match self {
+            Expr::Number { span, .. } => *span,
+            Expr::Name(name) => name.span,
+            Expr::Unary {
+                op_span, operand, ..
+            } => Span {
+                start: op_span.start,
+                end: operand.span().end,
+            },
+            Expr::Binary { lhs, rhs, .. } => Span {
+                start: lhs.span().start,
+                end: rhs.span().end,
+            },
+        }
+    }
 }
