@@ -1,0 +1,10 @@
+state Fib { a: int, b: int }
+
+step Next:
+    mechanism:
+        a: s.b
+        b: s.a + s.b
+
+system Fibonacci: Fib = Next
+
+run Fibonacci from Fib { a: 0, b: 1 } for 100 steps

@@ -1,0 +1,29 @@
+-- fixture: amm_fee_zero
+-- role: negative (float rounding vs invariant)
+-- status: pending: `allowed`, `invariant`, `>=`
+-- oracle: with no fee the product should stay exactly constant, but binary floats round.
+--         Trading 7 per step, x*y is 999999.9999999999 at step 11: below k0 only because of
+--         rounding. The invariant fails, the violating state is recorded as the last row (D8),
+--         and the job stops. The point of the fixture is to pin whatever IEEE arithmetic gives, so a
+--         change in how Roxin evaluates (fused multiply-add, extended precision, reordering) is
+--         caught. A real model would state this invariant with `within` or a margin.
+-- compare: exact
+
+param trade: float = 7
+param k0: float = 1_000_000
+
+state Pool { x: float, y: float }
+
+invariant NotShrinking(s: Pool) = s.x * s.y >= k0
+
+step Swap:
+    input:
+        amount: float = trade
+    allowed: amount in 0..s.x
+    mechanism:
+        x: s.x + u.amount
+        y: s.x * s.y / (s.x + u.amount)
+
+system Amm: Pool = Swap
+
+run Amm from Pool { x: 1000, y: 1000 } for 50 steps

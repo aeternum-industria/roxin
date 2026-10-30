@@ -1,0 +1,19 @@
+-- fixture: logistic_map
+-- role: golden (sweep)
+-- status: runnable today
+-- oracle: x' = r x (1 - x). r = 2.5 converges to 0.6 (fixed point 1 - 1/r).
+--         r = 3.2 settles into a 2-cycle (about 0.5130 and 0.7995). r = 3.9 is chaotic.
+-- compare: float tolerance 1e-9 relative (chaotic job: compare only a few rows, errors grow)
+
+param r: float = 2.5
+
+state Pop { x: float }
+
+step Grow:
+    mechanism:
+        x: r * s.x * (1 - s.x)
+
+system Logistic: Pop = Grow
+
+run Logistic from Pop { x: 0.2 } for 40 steps
+    sweep r in [2.5, 3.2, 3.9]

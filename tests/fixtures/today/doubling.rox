@@ -1,0 +1,16 @@
+-- fixture: doubling
+-- role: golden
+-- status: runnable today
+-- oracle: x after k steps is 2^k. Row 100 is 1267650600228229401496703205376,
+--         which does not fit in 64 bits (it needs the i128 stand-in, or real big ints, D1).
+-- compare: exact
+
+state Power { x: int }
+
+step Double:
+    mechanism:
+        x: s.x * 2
+
+system Doubling: Power = Double
+
+run Doubling from Power { x: 1 } for 100 steps

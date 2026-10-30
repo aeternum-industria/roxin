@@ -1,0 +1,13 @@
+job 0  k = 0.5
+    0  { temp: 10 }
+    1  { temp: 15 }
+    2  { temp: 17.5 }
+    3  { temp: 18.75 }
+    4  { temp: 19.375 }
+    5  { temp: 19.6875 }
+    6  { temp: 19.84375 }
+    7  { temp: 19.921875 }
+    8  { temp: 19.9609375 }
+job 1  k = 1.5
+    0  { temp: 10 }
+  stopped at step 1: admissibility violation: `heat` = 15 is not in 0..5, state { temp: 10 }

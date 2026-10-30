@@ -1,0 +1,22 @@
+-- fixture: repeated_dosing
+-- role: golden
+-- status: pending: if/then/else, ==, %, `step`
+-- oracle: a 100 mg dose on steps 1, 7, 13, ... with 10% cleared per step (discrete model).
+--         The peak right after a dose tends to 100 / (1 - 0.9^6) = 213.4 mg and the trough
+--         before the next dose to 213.4 * 0.9^5 = 126.0 mg.
+-- compare: float tolerance 1e-9 relative
+
+param clearance: float = 0.1
+param dose: float = 100
+
+state Plasma { conc: float }
+
+step Dose:
+    input:
+        amount: float = if step % 6 == 1 then dose else 0
+    mechanism:
+        conc: s.conc * (1 - clearance) + u.amount
+
+system Dosing: Plasma = Dose
+
+run Dosing from Plasma { conc: 0 } for 120 steps

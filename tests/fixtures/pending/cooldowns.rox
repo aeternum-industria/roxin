@@ -1,0 +1,20 @@
+-- fixture: cooldowns
+-- role: golden
+-- status: pending: if/then/else, ==, %, `step`
+-- oracle: fireball fires every 4th step, heal every 3rd. After k steps: fireballs = k // 4,
+--         heals = k // 3. Both fire together on steps 12 and 24.
+-- compare: exact
+
+state Fighter { fireballs: int, heals: int }
+
+step Abilities:
+    input:
+        fireball: int = if step % 4 == 0 then 1 else 0
+        heal: int = if step % 3 == 0 then 1 else 0
+    mechanism:
+        fireballs: s.fireballs + u.fireball
+        heals: s.heals + u.heal
+
+system Combat: Fighter = Abilities
+
+run Combat from Fighter { fireballs: 0, heals: 0 } for 24 steps

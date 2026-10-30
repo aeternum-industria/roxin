@@ -1,0 +1,18 @@
+-- fixture: collatz
+-- role: golden
+-- status: pending: if/then/else, ==, %, `until`
+-- oracle: Collatz from 27 reaches 1 after 111 steps (peak value 9232). `until` is tested before
+--         each step, so the run has 112 rows (0..111) and ends cleanly at n = 1.
+-- note: the exact spelling of `until` is provisional: the spec says only "a predicate on the state".
+-- compare: exact
+
+state Walk { n: int }
+
+step Collatz:
+    mechanism:
+        n: if s.n % 2 == 0 then s.n // 2 else 3 * s.n + 1
+
+system Hailstone: Walk = Collatz
+
+run Hailstone from Walk { n: 27 } for 200 steps
+    until s.n == 1

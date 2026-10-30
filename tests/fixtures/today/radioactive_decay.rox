@@ -1,0 +1,18 @@
+-- fixture: radioactive_decay
+-- role: golden (sweep)
+-- status: runnable today
+-- oracle: atoms after k steps = 1000 * (1 - decay)^k (the discrete model, not e^-lambda t).
+-- compare: float tolerance 1e-9 relative
+
+param decay: float = 0.1
+
+state Sample { atoms: float }
+
+step Decay:
+    mechanism:
+        atoms: s.atoms * (1 - decay)
+
+system Radium: Sample = Decay
+
+run Radium from Sample { atoms: 1000 } for 20 steps
+    sweep decay in [0.05, 0.1]

@@ -1,0 +1,19 @@
+-- A constant-product pool (x * y = k) with a trading fee, one swap per step.
+-- The trader pays `amount` of x into the pool; y is paid out so that the fee stays in the pool.
+
+param fee: float = 0.003
+param trade: float = 10
+
+state Pool { x: float, y: float }
+
+step Swap:
+    input:
+        amount: float = trade
+    mechanism:
+        x: s.x + u.amount
+        y: s.x * s.y / (s.x + u.amount * (1 - fee))
+
+system Amm: Pool = Swap
+
+run Amm from Pool { x: 1000, y: 1000 } for 50 steps
+    sweep fee in [0, 0.003, 0.01]

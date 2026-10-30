@@ -1,0 +1,21 @@
+-- A PID controller driving a position to the setpoint 10, at three proportional gains.
+
+param kp: float = 0.2
+param ki: float = 0.05
+param kd: float = 0.1
+param setpoint: float = 10
+
+state Loop { pos: float, integral: float, prev_err: float }
+
+step Control:
+    input:
+        force: float = kp * (setpoint - s.pos) + ki * s.integral + kd * ((setpoint - s.pos) - s.prev_err)
+    mechanism:
+        pos: s.pos + u.force
+        integral: s.integral + (setpoint - s.pos)
+        prev_err: setpoint - s.pos
+
+system Pid: Loop = Control
+
+run Pid from Loop { pos: 0, integral: 0, prev_err: 0 } for 60 steps
+    sweep kp in [0.2, 0.5, 1.2]

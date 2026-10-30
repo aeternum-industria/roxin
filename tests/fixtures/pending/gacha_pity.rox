@@ -1,0 +1,26 @@
+-- fixture: gacha_pity
+-- role: golden (statistical)
+-- status: pending: `uniform`, `runs`, `seed`, `until`, `or`, if/then/else
+-- oracle: a 0.6% rare drop with a guaranteed rare at the 90th pull. Expected pulls to the first
+--         rare = (1 - 0.994^90) / 0.006 = 69.7.
+--         Run until the first rare over 5000 runs and average the step count: expect 69.7 +- 1.5.
+-- compare: statistical
+
+param rate: float = 0.006
+param pity: int = 90
+
+state Gacha { since: int, rares: int }
+
+step Pull:
+    input:
+        roll: float = uniform(0, 1)
+    mechanism:
+        rares: s.rares + (if u.roll < rate or s.since + 1 >= pity then 1 else 0)
+        since: if u.roll < rate or s.since + 1 >= pity then 0 else s.since + 1
+
+system Banner: Gacha = Pull
+
+run Banner from Gacha { since: 0, rares: 0 } for 1000 steps
+    until s.rares >= 1
+    runs 5000
+    seed 3

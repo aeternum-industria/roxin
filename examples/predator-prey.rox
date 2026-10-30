@@ -1,0 +1,24 @@
+-- Discrete predator-prey. Provisional syntax.
+-- Expected rows (prey, pred):
+--   step 0: 40, 9
+--   step 1: 43.28, 8.46          (kills = 0.72)
+--   step 2: 46.8757024, 7.9801488 (kills = 0.7322976)
+-- Equilibrium: starting from (100, 50), every step returns (100, 50).
+-- Floats: compare with a tolerance, not exact equality.
+
+param birth: float = 0.1
+param hunt:  float = 0.002
+param conv:  float = 0.5
+param death: float = 0.1
+
+state Pop { prey: float, pred: float }
+
+step Ecosystem:
+    input:
+        kills: float = hunt * s.prey * s.pred
+    mechanism:
+        prey: s.prey + birth * s.prey - u.kills
+        pred: s.pred + conv * u.kills - death * s.pred
+
+system PredatorPrey: Pop = Ecosystem
+run PredatorPrey from Pop { prey: 40, pred: 9 } for 2 steps

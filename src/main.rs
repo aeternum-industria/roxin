@@ -4,9 +4,10 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use roxin::layout::Layout;
+use roxin::interpreter::Model;
 use roxin::parser::parse;
-use roxin::token::Token;
+use roxin::run::{Job, Status};
+use roxin::token::Span;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -22,23 +23,43 @@ struct Args {
     source_file: Option<PathBuf>,
 }
 
-fn print_layout_results(source: &str) {
-    for token in Layout::new(source) {
-        print_token(source, &token);
+fn report(source: &str, span: Span, message: &str) {
+    let (line, col) = line_col(source, span.start);
+    eprintln!("error at line {line}, column {col}: {message}");
+}
+
+fn print_job(job: &Job) {
+    let params: Vec<String> = job
+        .overrides
+        .iter()
+        .map(|(n, v)| format!("{n} = {v}"))
+        .collect();
+    println!("job {} {}", job.index, params.join(", "));
+
+    for (step, row) in job.rows.iter().enumerate() {
+        println!("  {step:>3}  {row}");
+    }
+
+    if let Status::Stopped { at_step, error } = &job.status {
+        println!("  stopped at step {at_step}: {error}");
     }
 }
 
-fn print_token(source: &str, token: &Token) {
-    let text = &source[token.span.start..token.span.end];
-    println!("{:?} <{:?}>", text, token.kind);
-}
-
-fn print_parse_results(source: &str) {
-    match parse(source) {
-        Ok(module) => println!("{module:#?}"),
+fn print_run_results(source: &str) {
+    let module = match parse(source) {
+        Ok(module) => module,
         Err(e) => {
-            let (line, col) = line_col(source, e.span.start);
-            eprintln!("error at line {line}, column {col}: {}", e.message);
+            report(source, e.span, &e.message);
+            return;
+        }
+    };
+
+    let model = Model::from_module(module);
+
+    for run in &model.runs {
+        match model.run(run) {
+            Ok(jobs) => jobs.iter().for_each(print_job),
+            Err(e) => report(source, e.span, &e.message),
         }
     }
 }
@@ -68,8 +89,7 @@ fn repl() {
         if exp.trim() == quit {
             break;
         } else {
-            print_layout_results(&exp);
-            print_parse_results(&exp);
+            print_run_results(&exp);
         }
     }
 }
@@ -77,8 +97,7 @@ fn repl() {
 fn read_file(path: PathBuf) {
     match fs::read_to_string(path) {
         Ok(content) => {
-            print_layout_results(&content);
-            print_parse_results(&content);
+            print_run_results(&content);
         }
         Err(error) => eprintln!("Error reading source file: {}", error),
     }

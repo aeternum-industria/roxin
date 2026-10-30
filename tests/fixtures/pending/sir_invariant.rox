@@ -1,0 +1,30 @@
+-- fixture: sir_invariant
+-- role: conservation
+-- status: pending: `invariant`, `within`, `metric`
+-- oracle: the same model as sir.rox, with the conservation law stated as an invariant.
+--         s + i + r == 1 holds to within 1e-9 on every row of every job, so all three jobs finish.
+--         The metric records the infected fraction each step.
+-- compare: float tolerance 1e-9 relative
+
+param beta: float = 0.2
+param gamma: float = 0.1
+
+state Epidemic { s: float, i: float, r: float }
+
+invariant Conserved(s: Epidemic) = s.s + s.i + s.r == 1 within 0.000000001
+
+metric Infected(s: Epidemic): float = s.i
+
+step Spread:
+    input:
+        infections: float = beta * s.s * s.i
+        recoveries: float = gamma * s.i
+    mechanism:
+        s: s.s - u.infections
+        i: s.i + u.infections - u.recoveries
+        r: s.r + u.recoveries
+
+system Outbreak: Epidemic = Spread
+
+run Outbreak from Epidemic { s: 0.999, i: 0.001, r: 0 } for 300 steps
+    sweep beta in [0.1, 0.2, 0.4]

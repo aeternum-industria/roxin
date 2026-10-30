@@ -1,0 +1,18 @@
+-- fixture: newton_cooling
+-- role: golden
+-- status: runnable today
+-- oracle: temp after k steps = ambient + (90 - ambient) * (1 - k_cool)^k, tends to ambient.
+-- compare: float tolerance 1e-9 relative
+
+param ambient: float = 20
+param k_cool: float = 0.1
+
+state Cup { temp: float }
+
+step Cool:
+    mechanism:
+        temp: s.temp + k_cool * (ambient - s.temp)
+
+system Coffee: Cup = Cool
+
+run Coffee from Cup { temp: 90 } for 30 steps

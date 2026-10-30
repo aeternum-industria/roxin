@@ -1,0 +1,18 @@
+-- fixture: compound_interest
+-- role: golden (sweep)
+-- status: runnable today
+-- oracle: balance after k steps = 1000 * (1 + rate)^k. Row 10: 1104.62 / 1628.89 / 2593.74 (rounded).
+-- compare: float tolerance 1e-9 relative
+
+param rate: float = 0.05
+
+state Account { balance: float }
+
+step Interest:
+    mechanism:
+        balance: s.balance * (1 + rate)
+
+system Savings: Account = Interest
+
+run Savings from Account { balance: 1000 } for 10 steps
+    sweep rate in [0.01, 0.05, 0.10]

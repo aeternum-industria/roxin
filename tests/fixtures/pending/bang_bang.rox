@@ -1,0 +1,24 @@
+-- fixture: bang_bang
+-- role: golden
+-- status: pending: if/then/else, comparisons, bool state, `true`/`false`
+-- oracle: a heater with hysteresis switches on below 18 and off above 22 and keeps its
+--         previous setting in between. The temperature oscillates inside a band; the
+--         `on` field flips a fixed number of times (see expected file). Exercises bool fields.
+-- compare: float tolerance 1e-9 relative, bool exact
+
+param low: float = 18
+param high: float = 22
+param heat_gain: float = 2
+param loss: float = 0.1
+param outside: float = 5
+
+state House { temp: float, on: bool }
+
+step Thermostat:
+    mechanism:
+        on: if s.temp < low then true else if s.temp > high then false else s.on
+        temp: s.temp + (if s.on then heat_gain else 0.0) - loss * (s.temp - outside)
+
+system Heating: House = Thermostat
+
+run Heating from House { temp: 15, on: false } for 100 steps

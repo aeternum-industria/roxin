@@ -1,0 +1,18 @@
+-- A gold faucet and a spending rule in an idle game.
+-- The player decides how much to spend; the mechanism says what that does to the wallet.
+
+param faucet: float = 100    -- gold earned per step
+param spend_rate: float = 0.05  -- fraction of the wallet the player spends per step
+
+state Wallet { gold: float }
+
+step Economy:
+    input:
+        spend: float = spend_rate * s.gold     -- the decision
+    mechanism:
+        gold: s.gold + faucet - u.spend        -- the consequence
+
+system Game: Wallet = Economy
+
+run Game from Wallet { gold: 0 } for 60 steps
+    sweep spend_rate in [0.02, 0.05, 0.10]

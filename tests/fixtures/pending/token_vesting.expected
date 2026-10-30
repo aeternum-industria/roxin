@@ -1,0 +1,14 @@
+job 0  
+    0  { locked: 1000003, released: 0 }
+    1  { locked: 916670, released: 83333 }
+    2  { locked: 833336, released: 166667 }
+    3  { locked: 750003, released: 250000 }
+    4  { locked: 666669, released: 333334 }
+    5  { locked: 583336, released: 416667 }
+    6  { locked: 500002, released: 500001 }
+    7  { locked: 416668, released: 583335 }
+    8  { locked: 333335, released: 666668 }
+    9  { locked: 250001, released: 750002 }
+   10  { locked: 166668, released: 833335 }
+   11  { locked: 83334, released: 916669 }
+   12  { locked: 0, released: 1000003 }

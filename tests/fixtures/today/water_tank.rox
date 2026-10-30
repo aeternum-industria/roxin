@@ -1,0 +1,19 @@
+-- fixture: water_tank
+-- role: golden
+-- status: runnable today
+-- oracle: level' = level + inflow - drain * level. Steady state = inflow / drain = 20.
+--         Exact solution: 20 * (1 - (1 - drain)^k).
+-- compare: float tolerance 1e-9 relative
+
+param inflow: float = 2
+param drain: float = 0.1
+
+state Tank { level: float }
+
+step Flow:
+    mechanism:
+        level: s.level + inflow - drain * s.level
+
+system TankSystem: Tank = Flow
+
+run TankSystem from Tank { level: 0 } for 100 steps

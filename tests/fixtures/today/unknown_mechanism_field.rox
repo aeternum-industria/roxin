@@ -1,0 +1,16 @@
+-- fixture: unknown_mechanism_field
+-- role: negative
+-- status: runnable today
+-- oracle: the mechanism sets a field the state does not have.
+-- compare: exact (error text)
+
+state Room { temp: float }
+
+step Heating:
+    mechanism:
+        temp: s.temp + 1
+        pressure: 3
+
+system Heater: Room = Heating
+
+run Heater from Room { temp: 10 } for 3 steps

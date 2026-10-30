@@ -1,0 +1,21 @@
+-- fixture: unstable_pendulum
+-- role: negative (D4 divergence)
+-- status: runnable today
+-- oracle: explicit Euler on an inverted pendulum with a very stiff g/l. The growth factor per
+--         step is about 1000, so theta passes the f64 limit and the job stops with an arithmetic
+--         error (see expected file for the step). Demonstrates a "bad number" being caught.
+-- compare: exact rows up to the stop step, error kind only
+
+param dt: float = 1
+param g_over_l: float = 1_000_000
+
+state Pendulum { theta: float, omega: float }
+
+step Fall:
+    mechanism:
+        theta: s.theta + dt * s.omega
+        omega: s.omega + dt * g_over_l * s.theta
+
+system Inverted: Pendulum = Fall
+
+run Inverted from Pendulum { theta: 0.01, omega: 0 } for 400 steps

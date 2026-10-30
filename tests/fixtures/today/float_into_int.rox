@@ -1,0 +1,15 @@
+-- fixture: float_into_int
+-- role: negative
+-- status: runnable today
+-- oracle: a float value is never silently converted to an int field.
+-- compare: exact (error text)
+
+state Counter { n: int }
+
+step Tick:
+    mechanism:
+        n: s.n + 0.5
+
+system Clock: Counter = Tick
+
+run Clock from Counter { n: 0 } for 3 steps

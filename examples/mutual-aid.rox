@@ -1,0 +1,21 @@
+-- A mutual aid fund. Every member contributes each step; some members claim a payout.
+-- The fund is sustainable only if contributions cover the expected payouts.
+
+param members: int = 100
+param contribution: float = 1      -- paid by each member per step
+param claim_rate: float = 0.1      -- fraction of members who claim per step
+param payout: float = 10           -- paid per claim
+
+state Fund { balance: float }
+
+step Month:
+    input:
+        paid_in: float = members * contribution
+        paid_out: float = members * claim_rate * payout
+    mechanism:
+        balance: s.balance + u.paid_in - u.paid_out
+
+system Aid: Fund = Month
+
+run Aid from Fund { balance: 500 } for 24 steps
+    sweep claim_rate in [0.05, 0.1, 0.2]

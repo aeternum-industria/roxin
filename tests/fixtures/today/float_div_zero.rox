@@ -1,0 +1,18 @@
+-- fixture: float_div_zero
+-- role: negative
+-- status: runnable today
+-- oracle: D4: division by zero stops the job. x goes 2, 1, 0; at step 3 the input computes 1 / 0.
+--         Rows 0..2 are kept.
+-- compare: exact (error text)
+
+state Countdown { x: float }
+
+step Invert:
+    input:
+        inv: float = 1 / s.x
+    mechanism:
+        x: s.x - 1
+
+system Count: Countdown = Invert
+
+run Count from Countdown { x: 2 } for 5 steps

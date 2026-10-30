@@ -1,0 +1,18 @@
+-- Robot arms and marbles (periodic activation).
+-- Provisional syntax; see README "A tour of the language".
+-- Expected rows 0..10 (box_a, box_b):
+--   (10,0) (10,0) (9,1) (8,2) (7,3) (7,3) (5,5) (5,5) (5,5) (5,5) (5,5)
+-- box_a + box_b == 10 on every row.
+
+state Boxes { box_a: int, box_b: int }
+
+step Robots:
+    input:
+        arm1: int = if step % 2 == 0 then sign(s.box_b - s.box_a) else 0
+        arm2: int = if step % 3 == 0 then sign(s.box_b - s.box_a) else 0
+    mechanism:
+        box_a: s.box_a + u.arm1 + u.arm2
+        box_b: s.box_b - u.arm1 - u.arm2
+
+system Marbles: Boxes = Robots
+run Marbles from Boxes { box_a: 10, box_b: 0 } for 10 steps

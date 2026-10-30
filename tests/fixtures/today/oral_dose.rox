@@ -1,0 +1,25 @@
+-- fixture: oral_dose
+-- role: conservation
+-- status: runnable today
+-- oracle: one pill of 100 mg. gut + plasma + eliminated == 100 on every row.
+--         Plasma peaks, then decays. Sweep the absorption rate ka.
+-- compare: float tolerance 1e-9 relative
+
+param ka: float = 0.3
+param ke: float = 0.1
+
+state Body { gut: float, plasma: float, eliminated: float }
+
+step Absorb:
+    input:
+        absorbed: float = ka * s.gut
+        cleared: float = ke * s.plasma
+    mechanism:
+        gut: s.gut - u.absorbed
+        plasma: s.plasma + u.absorbed - u.cleared
+        eliminated: s.eliminated + u.cleared
+
+system Pill: Body = Absorb
+
+run Pill from Body { gut: 100, plasma: 0, eliminated: 0 } for 40 steps
+    sweep ka in [0.1, 0.3, 0.6]

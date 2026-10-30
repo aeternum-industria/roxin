@@ -1,0 +1,28 @@
+-- Thermostat. Provisional syntax; see README "A taste of Roxin".
+-- Start 10, setpoint 20, 8 steps. All values are exact binary fractions,
+-- so float arithmetic reproduces them exactly (tolerance 1e-12 is still fine).
+--
+--   k      rows 0-3                        row 8
+--   0.25   10, 12.5, 14.375, 15.78125      18.998870849609375
+--   0.5    10, 15, 17.5, 18.75             19.9609375
+--   1.5    10, 25, 17.5, 21.25             19.9609375
+--
+-- Variant with `allowed: heat in 0..5` on the step (add it under `input:`):
+--   k = 0.5: first heat is 5 (boundary, legal).
+--   k = 1.5: first heat is 15, an admissibility error at step 1 with temp = 10.
+
+param setpoint: float = 20
+param k: float = 0.5
+
+state Room { temp: float }
+
+step Heating:
+    input:
+        heat: float = k * (setpoint - s.temp)    -- the decision
+    mechanism:
+        temp: s.temp + u.heat                    -- the physics
+
+system Thermostat: Room = Heating
+
+run Thermostat from Room { temp: 10 } for 8 steps
+    sweep k in [0.25, 0.5, 1.5]

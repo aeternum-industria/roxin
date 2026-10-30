@@ -1,0 +1,15 @@
+-- fixture: int_slash
+-- role: negative
+-- status: runnable today
+-- oracle: D5: `/` on two ints is an error. Use `//` (floor division) or convert to float.
+-- compare: exact (error text)
+
+state Counter { n: int }
+
+step Halve:
+    mechanism:
+        n: s.n / 2
+
+system Clock: Counter = Halve
+
+run Clock from Counter { n: 8 } for 3 steps

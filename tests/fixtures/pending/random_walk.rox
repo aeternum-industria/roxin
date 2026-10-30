@@ -1,0 +1,26 @@
+-- fixture: random_walk
+-- role: golden (RNG, D7)
+-- status: pending: `uniform`, `runs`, `seed`, if/then/else
+-- oracle: +1 or -1 with equal chance, one uniform draw per step. With D7 as written
+--         (SplitMix64 -> xoshiro256++, uniform = (next_u64 >> 11) * 2^-53) the three jobs with
+--         seed 42 are fixed bit-for-bit; random_walk.expected was produced by tools/reference.py,
+--         an independent implementation of D7. Reading of D7 used there:
+--           job_seed(j) = first output of the SplitMix64 stream started at (42 xor j);
+--           xoshiro state = the first four outputs of the SplitMix64 stream started at job_seed.
+--         If your reading differs, that is a spec ambiguity worth recording in decisions.md.
+--         Statistically: mean 0 and variance = number of steps over many runs.
+-- compare: exact
+
+state Walker { pos: int }
+
+step Move:
+    input:
+        dir: int = if uniform(0, 1) < 0.5 then 1 else -1
+    mechanism:
+        pos: s.pos + u.dir
+
+system Walk: Walker = Move
+
+run Walk from Walker { pos: 0 } for 20 steps
+    runs 3
+    seed 42

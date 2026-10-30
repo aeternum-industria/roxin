@@ -1,0 +1,18 @@
+-- fixture: input_reads_input
+-- role: negative
+-- status: runnable today
+-- oracle: D3: input fields are independent; `u` does not exist while inputs are computed.
+-- compare: exact (error text)
+
+state Room { temp: float }
+
+step Heating:
+    input:
+        a: float = 1
+        b: float = u.a * 2
+    mechanism:
+        temp: s.temp + u.b
+
+system Heater: Room = Heating
+
+run Heater from Room { temp: 10 } for 3 steps

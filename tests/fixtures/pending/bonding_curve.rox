@@ -1,0 +1,24 @@
+-- fixture: bonding_curve
+-- role: conservation
+-- status: pending: `invariant`, `within`
+-- oracle: price = base + slope * supply. Buying `amount` tokens costs the integral of the price:
+--         amount * (base + slope * (supply + amount / 2)). The reserve must equal
+--         base * supply + slope * supply^2 / 2 at all times (to 1e-6).
+-- compare: float tolerance 1e-9 relative
+
+param base: float = 1
+param slope: float = 0.01
+param amount: float = 10
+
+state Curve { supply: float, reserve: float }
+
+invariant Backed(s: Curve) = s.reserve == base * s.supply + slope * s.supply ^ 2 / 2 within 0.000001
+
+step Buy:
+    mechanism:
+        supply: s.supply + amount
+        reserve: s.reserve + amount * (base + slope * (s.supply + amount / 2))
+
+system Market: Curve = Buy
+
+run Market from Curve { supply: 0, reserve: 0 } for 50 steps

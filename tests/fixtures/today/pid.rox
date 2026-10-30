@@ -1,0 +1,27 @@
+-- fixture: pid
+-- role: golden (sweep)
+-- status: runnable today
+-- oracle: a PID controller driving position to the setpoint 10 on a plant that adds the force.
+--         The integral term removes the steady-state error: pos tends to 10 for each gain.
+--         Inputs cannot read each other (D3), so the error is recomputed where needed.
+-- compare: float tolerance 1e-9 relative
+
+param kp: float = 0.2
+param ki: float = 0.05
+param kd: float = 0.1
+param setpoint: float = 10
+
+state Loop { pos: float, integral: float, prev_err: float }
+
+step Control:
+    input:
+        force: float = kp * (setpoint - s.pos) + ki * s.integral + kd * ((setpoint - s.pos) - s.prev_err)
+    mechanism:
+        pos: s.pos + u.force
+        integral: s.integral + (setpoint - s.pos)
+        prev_err: setpoint - s.pos
+
+system Pid: Loop = Control
+
+run Pid from Loop { pos: 0, integral: 0, prev_err: 0 } for 60 steps
+    sweep kp in [0.2, 0.5, 1.2]

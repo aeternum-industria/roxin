@@ -1,0 +1,26 @@
+-- fixture: token_vesting
+-- role: conservation
+-- status: pending: `step`, `invariant`, int `//`, `==`
+-- oracle: 1_000_003 tokens vest over 12 steps. The unlock at step k is
+--         total*k//12 - total*(k-1)//12, so the integer remainder is spread across steps and
+--         the sum is exactly total with no rounding drift. locked + released == total on every row.
+--         Final row: locked 0, released 1000003.
+-- compare: exact
+
+param total: int = 1_000_003
+param months: int = 12
+
+state Vest { locked: int, released: int }
+
+invariant Conserved(s: Vest) = s.locked + s.released == total
+
+step Unlock:
+    input:
+        amount: int = total * step // months - total * (step - 1) // months
+    mechanism:
+        locked: s.locked - u.amount
+        released: s.released + u.amount
+
+system Vesting: Vest = Unlock
+
+run Vesting from Vest { locked: 1_000_003, released: 0 } for 12 steps

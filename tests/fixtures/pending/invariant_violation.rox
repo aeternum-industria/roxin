@@ -1,0 +1,18 @@
+-- fixture: invariant_violation
+-- role: negative (D8)
+-- status: pending: `invariant`, `<`
+-- oracle: n counts up and the invariant says n < 5. Row 5 (n = 5) violates it: that state is
+--         recorded as the final row, flagged with the invariant's name, and the job stops.
+-- compare: rows exact; message provisional
+
+state Counter { n: int }
+
+invariant Small(s: Counter) = s.n < 5
+
+step Tick:
+    mechanism:
+        n: s.n + 1
+
+system Clock: Counter = Tick
+
+run Clock from Counter { n: 0 } for 10 steps

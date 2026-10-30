@@ -1,0 +1,16 @@
+-- fixture: field_set_twice
+-- role: negative
+-- status: runnable today
+-- oracle: the mechanism sets `temp` twice.
+-- compare: exact (error text)
+
+state Room { temp: float }
+
+step Heating:
+    mechanism:
+        temp: s.temp + 1
+        temp: s.temp + 2
+
+system Heater: Room = Heating
+
+run Heater from Room { temp: 10 } for 3 steps

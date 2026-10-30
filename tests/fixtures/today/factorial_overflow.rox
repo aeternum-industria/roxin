@@ -1,0 +1,19 @@
+-- fixture: factorial_overflow
+-- role: negative (documents a KNOWN DIVERGENCE from the spec)
+-- status: runnable today
+-- oracle: with the i128 stand-in, step 34 overflows and the job stops with rows 0..33 kept.
+--         The spec (D1) says int is arbitrary precision, so once big integers exist this
+--         run must finish all 40 steps. When that happens, replace factorial_overflow.expected
+--         with factorial_overflow.expected-d1 (40! = 815915283247897734345611269596115894272000000000).
+-- compare: exact
+
+state Fact { n: int, f: int }
+
+step Multiply:
+    mechanism:
+        n: s.n + 1
+        f: s.f * (s.n + 1)
+
+system Factorial: Fact = Multiply
+
+run Factorial from Fact { n: 0, f: 1 } for 40 steps

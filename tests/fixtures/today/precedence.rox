@@ -1,0 +1,35 @@
+-- fixture: precedence
+-- role: torture + golden
+-- status: runnable today
+-- oracle: one step; the output row is each expression evaluated by hand:
+--   a = 2 + 3 * 4        = 14
+--   b = 2 ^ 3 ^ 2        = 512     (^ is right-associative: 2 ^ (3 ^ 2))
+--   c = -2 ^ 2           = -4      (^ binds tighter than unary minus)
+--   d = 10 - 4 - 3       = 3       (left-associative)
+--   e = 7 // 2           = 3
+--   f = -7 // 2          = -4      (unary minus first, then floor division)
+--   g = -7 % 3           = 2       (floored modulo, result takes the sign of the divisor)
+--   h = (2 + 3) * 4      = 20
+--   i = 100 // 7 // 2    = 7       (left-associative)
+-- note: `^` is not in the operator list of docs/core-semantics.md section 2.3 yet. Cases b and c
+--       encode the implemented rule (right-associative, tighter than unary minus). If that
+--       decision changes, those two rows change; the others follow the spec as written.
+-- compare: exact
+
+state Values { a: int, b: int, c: int, d: int, e: int, f: int, g: int, h: int, i: int }
+
+step Compute:
+    mechanism:
+        a: 2 + 3 * 4
+        b: 2 ^ 3 ^ 2
+        c: -2 ^ 2
+        d: 10 - 4 - 3
+        e: 7 // 2
+        f: -7 // 2
+        g: -7 % 3
+        h: (2 + 3) * 4
+        i: 100 // 7 // 2
+
+system Calc: Values = Compute
+
+run Calc from Values { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0, i: 0 } for 1 steps

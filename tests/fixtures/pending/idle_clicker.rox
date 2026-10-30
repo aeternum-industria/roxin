@@ -1,0 +1,19 @@
+-- fixture: idle_clicker
+-- role: golden
+-- status: pending: if/then/else, >=
+-- oracle: each step earns 1 coin plus 1 per clicker. A clicker costs 10 + 5 * (clickers owned),
+--         bought as soon as affordable (at most one per step). Pure int arithmetic, exact.
+-- compare: exact
+
+state Game { coins: int, clickers: int }
+
+step Play:
+    input:
+        buy: int = if s.coins >= 10 + 5 * s.clickers then 1 else 0
+    mechanism:
+        coins: s.coins + 1 + s.clickers - u.buy * (10 + 5 * s.clickers)
+        clickers: s.clickers + u.buy
+
+system Idle: Game = Play
+
+run Idle from Game { coins: 0, clickers: 0 } for 60 steps

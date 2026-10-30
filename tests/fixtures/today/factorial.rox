@@ -1,0 +1,17 @@
+-- fixture: factorial
+-- role: golden
+-- status: runnable today
+-- oracle: after k steps, f is k!. Row 30: f = 265252859812191058636308480000000.
+--         33! is the largest factorial that fits in i128 (see factorial_overflow).
+-- compare: exact
+
+state Fact { n: int, f: int }
+
+step Multiply:
+    mechanism:
+        n: s.n + 1
+        f: s.f * (s.n + 1)
+
+system Factorial: Fact = Multiply
+
+run Factorial from Fact { n: 0, f: 1 } for 30 steps

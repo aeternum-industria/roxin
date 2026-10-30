@@ -1,0 +1,16 @@
+-- An inverted pendulum stepped with a far-too-large step size: the numerics blow up.
+-- The growth factor per step is about 1000, so the angle passes the largest float and the job stops.
+
+param dt: float = 1
+param g_over_l: float = 1_000_000
+
+state Pendulum { theta: float, omega: float }
+
+step Fall:
+    mechanism:
+        theta: s.theta + dt * s.omega
+        omega: s.omega + dt * g_over_l * s.theta
+
+system Inverted: Pendulum = Fall
+
+run Inverted from Pendulum { theta: 0.01, omega: 0 } for 400 steps

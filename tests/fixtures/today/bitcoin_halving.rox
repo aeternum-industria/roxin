@@ -1,0 +1,24 @@
+-- fixture: bitcoin_halving
+-- role: golden
+-- status: runnable today
+-- oracle: one step = one halving era of 210000 blocks. The subsidy is 50 BTC in satoshis,
+--         halved by integer division, so it reaches 0 at era 33 and the supply stops growing.
+--         Final supply = 2099999997690000 satoshis (20,999,999.9769 BTC), exact.
+--         A float model drifts from this; an int model must not.
+-- compare: exact
+
+param blocks_per_era: int = 210000
+param initial_subsidy: int = 5_000_000_000
+
+state Chain { era: int, supply: int }
+
+step Era:
+    input:
+        subsidy: int = initial_subsidy // 2 ^ s.era
+    mechanism:
+        era: s.era + 1
+        supply: s.supply + u.subsidy * blocks_per_era
+
+system Bitcoin: Chain = Era
+
+run Bitcoin from Chain { era: 0, supply: 0 } for 40 steps

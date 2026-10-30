@@ -1,0 +1,29 @@
+-- fixture: sir
+-- role: conservation + golden (sweep)
+-- status: runnable today
+-- oracle: Euler step of the SIR model on population fractions.
+--         s + i + r == 1 on every row (to float rounding; this is the first invariant demo).
+--         beta = 0.1 (R0 = 1): the outbreak never takes off.
+--         beta = 0.2 (R0 = 2): the continuous model's final size is 0.7968; this Euler
+--         version lands close to it (see sir.expected).
+--         beta = 0.4 (R0 = 4): the epidemic is fast and big.
+-- compare: float tolerance 1e-9 relative
+
+param beta: float = 0.2
+param gamma: float = 0.1
+
+state Epidemic { s: float, i: float, r: float }
+
+step Spread:
+    input:
+        infections: float = beta * s.s * s.i
+        recoveries: float = gamma * s.i
+    mechanism:
+        s: s.s - u.infections
+        i: s.i + u.infections - u.recoveries
+        r: s.r + u.recoveries
+
+system Outbreak: Epidemic = Spread
+
+run Outbreak from Epidemic { s: 0.999, i: 0.001, r: 0 } for 300 steps
+    sweep beta in [0.1, 0.2, 0.4]

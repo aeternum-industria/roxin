@@ -1,0 +1,15 @@
+-- fixture: bad_step_count_negative
+-- role: negative
+-- status: runnable today
+-- oracle: the step count must be a non-negative int.
+-- compare: exact (error text)
+
+state Counter { n: int }
+
+step Tick:
+    mechanism:
+        n: s.n + 1
+
+system Clock: Counter = Tick
+
+run Clock from Counter { n: 0 } for -1 steps

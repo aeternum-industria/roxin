@@ -1,0 +1,17 @@
+-- Bitcoin's issuance schedule in whole satoshis. One step is one halving era (210,000 blocks).
+
+param blocks_per_era: int = 210000
+param initial_subsidy: int = 5_000_000_000    -- 50 BTC
+
+state Chain { era: int, supply: int }
+
+step Era:
+    input:
+        subsidy: int = initial_subsidy // 2 ^ s.era
+    mechanism:
+        era: s.era + 1
+        supply: s.supply + u.subsidy * blocks_per_era
+
+system Bitcoin: Chain = Era
+
+run Bitcoin from Chain { era: 0, supply: 0 } for 40 steps

@@ -1,0 +1,20 @@
+-- An epidemic on population fractions: susceptible, infected, recovered.
+
+param beta: float = 0.2     -- infections per infected person per step
+param gamma: float = 0.1    -- recoveries per infected person per step
+
+state Epidemic { s: float, i: float, r: float }
+
+step Spread:
+    input:
+        infections: float = beta * s.s * s.i
+        recoveries: float = gamma * s.i
+    mechanism:
+        s: s.s - u.infections
+        i: s.i + u.infections - u.recoveries
+        r: s.r + u.recoveries
+
+system Outbreak: Epidemic = Spread
+
+run Outbreak from Epidemic { s: 0.999, i: 0.001, r: 0 } for 300 steps
+    sweep beta in [0.1, 0.2, 0.4]

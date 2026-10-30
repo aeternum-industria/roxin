@@ -1,0 +1,16 @@
+-- fixture: missing_mechanism_field
+-- role: negative
+-- status: runnable today
+-- oracle: D2: a mechanism must account for every state field. `humidity` is forgotten.
+--         (Once `..s` is implemented, writing `..s` makes this legal; keep this file as the "forgot it" case.)
+-- compare: exact (error text)
+
+state Room { temp: float, humidity: float }
+
+step Heating:
+    mechanism:
+        temp: s.temp + 1
+
+system Heater: Room = Heating
+
+run Heater from Room { temp: 10, humidity: 40 } for 3 steps

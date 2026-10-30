@@ -1,0 +1,18 @@
+-- fixture: unknown_sweep_param
+-- role: negative
+-- status: runnable today
+-- oracle: a sweep must name a declared parameter; nothing runs.
+-- compare: exact (error text)
+
+param k: float = 0.5
+
+state Room { temp: float }
+
+step Heating:
+    mechanism:
+        temp: s.temp + k
+
+system Heater: Room = Heating
+
+run Heater from Room { temp: 10 } for 3 steps
+    sweep kk in [1, 2]

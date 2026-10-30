@@ -1,0 +1,31 @@
+-- fixture: amm_constant_product
+-- role: conservation
+-- status: pending: `allowed`, `invariant`, `>=`
+-- oracle: x * y never shrinks under a swap, and grows by the fee. Each step a trader pays 10 of x
+--         into the pool; y is paid out so that (x + 10 * (1 - fee)) * y_new = x * y.
+--         With fee > 0 the product grows every step.
+--         NOTE: float rounding makes `x * y >= k0` fragile at fee = 0; that is a real hazard
+--         (README risks: floating-point rounding breaking invariant checks) and is deliberately
+--         NOT in the sweep. See amm_fee_zero.rox, where it actually fires.
+-- compare: float tolerance 1e-9 relative
+
+param fee: float = 0.003
+param trade: float = 10
+param k0: float = 1_000_000
+
+state Pool { x: float, y: float }
+
+invariant NotShrinking(s: Pool) = s.x * s.y >= k0
+
+step Swap:
+    input:
+        amount: float = trade
+    allowed: amount in 0..s.x
+    mechanism:
+        x: s.x + u.amount
+        y: s.x * s.y / (s.x + u.amount * (1 - fee))
+
+system Amm: Pool = Swap
+
+run Amm from Pool { x: 1000, y: 1000 } for 50 steps
+    sweep fee in [0.003, 0.01]

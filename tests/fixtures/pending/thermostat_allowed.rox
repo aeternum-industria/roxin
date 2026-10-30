@@ -1,0 +1,25 @@
+-- fixture: thermostat_allowed
+-- role: negative (admissibility), M4 acceptance test
+-- status: pending: `allowed` and its error
+-- oracle: the README's thermostat with `allowed: heat in 0..5`.
+--         k = 0.5: first heat is 5 (the boundary is legal) and the run finishes; rows equal
+--                  thermostat.expected job 1.
+--         k = 1.5: first heat is 15, an admissibility error at step 1 with temp = 10.
+-- compare: rows exact; error text provisional
+
+param setpoint: float = 20
+param k: float = 0.5
+
+state Room { temp: float }
+
+step Heating:
+    input:
+        heat: float = k * (setpoint - s.temp)
+    allowed: heat in 0..5
+    mechanism:
+        temp: s.temp + u.heat
+
+system Thermostat: Room = Heating
+
+run Thermostat from Room { temp: 10 } for 8 steps
+    sweep k in [0.5, 1.5]

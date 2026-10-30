@@ -1,0 +1,5 @@
+job 0  
+    0  { x: 2 }
+    1  { x: 1 }
+    2  { x: 0 }
+  stopped at step 3: division by zero

@@ -1,0 +1,21 @@
+-- fixture: long_run
+-- role: stress
+-- status: runnable today
+-- oracle: one job, 200000 steps of the thermostat. No golden output; time it.
+--         The last row is 20 (k = 0.5 converges to the setpoint).
+-- compare: none
+
+param setpoint: float = 20
+param k: float = 0.5
+
+state Room { temp: float }
+
+step Heating:
+    input:
+        heat: float = k * (setpoint - s.temp)
+    mechanism:
+        temp: s.temp + u.heat
+
+system Thermostat: Room = Heating
+
+run Thermostat from Room { temp: 10 } for 200000 steps

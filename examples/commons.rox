@@ -1,0 +1,21 @@
+-- A shared fishery. Each member takes the same fraction of the stock every step.
+-- The only thing that changes between jobs is how many members there are.
+
+param growth: float = 0.2       -- regrowth rate of the stock
+param capacity: float = 1000    -- the most the water can hold
+param effort: float = 0.05      -- fraction of the stock one member takes per step
+param members: int = 1
+
+state Fishery { stock: float, caught: float }
+
+step Season:
+    input:
+        catch: float = members * effort * s.stock
+    mechanism:
+        stock: s.stock + growth * s.stock * (1 - s.stock / capacity) - u.catch
+        caught: s.caught + u.catch
+
+system Commons: Fishery = Season
+
+run Commons from Fishery { stock: 500, caught: 0 } for 100 steps
+    sweep members in [1, 2, 4]

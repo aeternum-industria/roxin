@@ -1,0 +1,20 @@
+-- An enzyme converts substrate to product at a rate that saturates: vmax * S / (km + S).
+-- Substrate plus product is conserved. One step is dt = 0.1 time units.
+
+param vmax: float = 1
+param km: float = 2
+param dt: float = 0.1
+
+state Reaction { substrate: float, product: float }
+
+step React:
+    input:
+        rate: float = vmax * s.substrate / (km + s.substrate)
+    mechanism:
+        substrate: s.substrate - u.rate * dt
+        product: s.product + u.rate * dt
+
+system Enzyme: Reaction = React
+
+run Enzyme from Reaction { substrate: 10, product: 0 } for 100 steps
+    sweep km in [0.5, 2, 8]

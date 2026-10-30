@@ -1,0 +1,17 @@
+-- fixture: until_already_true
+-- role: golden (D10)
+-- status: pending: `until`, `>=`
+-- oracle: `until` is tested before each step, so one that is already true does zero steps.
+--         The only row is row 0.
+-- compare: exact
+
+state Counter { n: int }
+
+step Tick:
+    mechanism:
+        n: s.n + 1
+
+system Clock: Counter = Tick
+
+run Clock from Counter { n: 3 } for 10 steps
+    until s.n >= 3

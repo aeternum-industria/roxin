@@ -1,0 +1,39 @@
+-- fixture: syntax_torture
+-- role: torture
+-- status: runnable today
+-- oracle: layout and lexing edge cases. Two jobs (small = 2.5e-3 and 5e-3). In each, n goes
+--         1000000 -> 1000003 and x grows by small * 1e3 per step: job 0 gives 2.5, 5, 7.5; job 1 gives 5, 10, 15.
+-- compare: exact
+
+-- comments between declarations, blank lines inside blocks, trailing commas, and
+-- a bracketed list that spans several lines all have to work.
+
+param big: int = 1_000_000      -- underscores in numbers
+param small: float = 2.5e-3     -- exponent form
+param scale: float = 1e3
+
+state Mixed {
+    n: int,
+    x: float,
+}
+
+step Tick:
+
+    input:
+        bump: int = 1           -- trailing comment
+
+        factor: float = (
+            small * scale
+        )
+
+    mechanism:
+        n: s.n + u.bump
+        x: s.x + u.factor
+
+system Torture: Mixed = Tick
+
+run Torture from Mixed { n: big, x: 0, } for 3 steps
+    sweep small in [
+        2.5e-3,
+        5e-3,
+    ]

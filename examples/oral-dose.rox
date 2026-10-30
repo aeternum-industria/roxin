@@ -1,0 +1,20 @@
+-- One 100 mg pill: gut, then bloodstream, then eliminated.
+
+param ka: float = 0.3     -- absorption rate (gut to blood)
+param ke: float = 0.1     -- elimination rate
+
+state Body { gut: float, plasma: float, eliminated: float }
+
+step Absorb:
+    input:
+        absorbed: float = ka * s.gut
+        cleared: float = ke * s.plasma
+    mechanism:
+        gut: s.gut - u.absorbed
+        plasma: s.plasma + u.absorbed - u.cleared
+        eliminated: s.eliminated + u.cleared
+
+system Pill: Body = Absorb
+
+run Pill from Body { gut: 100, plasma: 0, eliminated: 0 } for 40 steps
+    sweep ka in [0.1, 0.3, 0.6]

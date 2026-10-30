@@ -1,0 +1,16 @@
+-- fixture: float_overflow
+-- role: negative
+-- status: runnable today
+-- oracle: x is multiplied by 1e150 each step: row 1 = 1e150, row 2 = 1e300, and step 3 would be
+--         1e450, which is past the largest f64. D4: the job stops with an error, rows 0..2 are kept.
+-- compare: exact (error text included)
+
+state Grow { x: float }
+
+step Blow:
+    mechanism:
+        x: s.x * 1e150
+
+system Blowup: Grow = Blow
+
+run Blowup from Grow { x: 1 } for 12 steps

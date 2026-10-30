@@ -1,0 +1,21 @@
+-- fixture: combat_allowed
+-- role: negative (admissibility)
+-- status: pending: `allowed` and its error
+-- oracle: the player casts a 3-mana spell every step and regains 1 mana. Mana goes 10, 8, 6, 4, 2.
+--         At step 5 the spell costs 3 but mana is 2, so `spell in 0..s.mana` fails and the job stops.
+--         Rows 0..4 are kept; the error names the state and the input.
+-- compare: rows exact; error text provisional (match on "admissib" / step number)
+
+state Duel { mana: int, enemy_hp: int }
+
+step Cast:
+    input:
+        spell: int = 3
+    allowed: spell in 0..s.mana
+    mechanism:
+        mana: s.mana - u.spell + 1
+        enemy_hp: s.enemy_hp - 2 * u.spell
+
+system Fight: Duel = Cast
+
+run Fight from Duel { mana: 10, enemy_hp: 100 } for 10 steps

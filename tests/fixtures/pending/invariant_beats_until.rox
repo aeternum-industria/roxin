@@ -1,0 +1,19 @@
+-- fixture: invariant_beats_until
+-- role: negative (D10)
+-- status: pending: `invariant`, `until`, comparisons
+-- oracle: at row 3 the state violates the invariant AND satisfies `until`. The violation wins:
+--         the job is reported as stopped by the invariant, not as finished. Rows 0..3.
+-- compare: rows exact; message provisional
+
+state Counter { n: int }
+
+invariant Small(s: Counter) = s.n < 3
+
+step Tick:
+    mechanism:
+        n: s.n + 1
+
+system Clock: Counter = Tick
+
+run Clock from Counter { n: 0 } for 10 steps
+    until s.n >= 3

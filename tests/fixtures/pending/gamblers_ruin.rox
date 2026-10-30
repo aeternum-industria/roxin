@@ -1,0 +1,22 @@
+-- fixture: gamblers_ruin
+-- role: golden (statistical)
+-- status: pending: `uniform`, `runs`, `seed`, `until`, `or`
+-- oracle: fair coin, start with 10, stop at 0 (ruin) or 20 (win). P(ruin) = 1 - 10/20 = 0.5 and
+--         the mean duration is 10 * 10 = 100 steps. Over 2000 runs the ruin fraction should be
+--         0.5 +- 0.03 (3 sigma). Test with a statistical check, not exact rows.
+-- compare: statistical
+
+state Gambler { bankroll: int }
+
+step Bet:
+    input:
+        win: int = if uniform(0, 1) < 0.5 then 1 else -1
+    mechanism:
+        bankroll: s.bankroll + u.win
+
+system Casino: Gambler = Bet
+
+run Casino from Gambler { bankroll: 10 } for 5000 steps
+    until s.bankroll == 0 or s.bankroll == 20
+    runs 2000
+    seed 7

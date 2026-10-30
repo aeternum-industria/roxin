@@ -1,0 +1,26 @@
+job 0  
+    0  { fireballs: 0, heals: 0 }
+    1  { fireballs: 0, heals: 0 }
+    2  { fireballs: 0, heals: 0 }
+    3  { fireballs: 0, heals: 1 }
+    4  { fireballs: 1, heals: 1 }
+    5  { fireballs: 1, heals: 1 }
+    6  { fireballs: 1, heals: 2 }
+    7  { fireballs: 1, heals: 2 }
+    8  { fireballs: 2, heals: 2 }
+    9  { fireballs: 2, heals: 3 }
+   10  { fireballs: 2, heals: 3 }
+   11  { fireballs: 2, heals: 3 }
+   12  { fireballs: 3, heals: 4 }
+   13  { fireballs: 3, heals: 4 }
+   14  { fireballs: 3, heals: 4 }
+   15  { fireballs: 3, heals: 5 }
+   16  { fireballs: 4, heals: 5 }
+   17  { fireballs: 4, heals: 5 }
+   18  { fireballs: 4, heals: 6 }
+   19  { fireballs: 4, heals: 6 }
+   20  { fireballs: 5, heals: 6 }
+   21  { fireballs: 5, heals: 7 }
+   22  { fireballs: 5, heals: 7 }
+   23  { fireballs: 5, heals: 7 }
+   24  { fireballs: 6, heals: 8 }
