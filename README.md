@@ -28,7 +28,6 @@ It is named for Emilio Roxin, whose 1960s work on generalized dynamical systems 
 10. [Where it is going](#where-it-is-going)
 11. [Documentation map](#documentation-map)
 12. [References](#references) and [License](#license)
-13. [Open Questions](#open-questions)
 
 ---
 
