@@ -30,10 +30,28 @@ pub struct SystemDecl {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StepDecl {
+    pub name: Name,
+    pub inputs: Vec<InputField>,
+    pub allowed: Option<Expr>,
+    pub mechanism: Vec<MechanismField>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunDecl {
+    pub system: Name,
+    pub initial: RecordLit,
+    pub steps: Expr,
+    pub clauses: Vec<RunClause>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item {
     Param(ParamDecl),
     State(StateDecl),
     System(SystemDecl),
+    Step(StepDecl),
+    Run(RunDecl),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +63,42 @@ pub struct Module {
 pub struct Field {
     pub name: Name,
     pub ty: TypeExpr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MechanismField {
+    pub name: Name,
+    pub value: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InputField {
+    pub name: Name,
+    pub ty: TypeExpr,
+    pub value: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldInit {
+    pub name: Name,
+    pub value: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordLit {
+    pub ty: Name,
+    pub fields: Vec<FieldInit>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SweepClause {
+    pub param: Name,
+    pub values: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunClause {
+    Sweep(SweepClause),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

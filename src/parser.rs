@@ -1,5 +1,6 @@
 use crate::ast::{
-    BinOp, Expr, Field, Item, Module, Name, ParamDecl, StateDecl, SystemDecl, TypeExpr, UnOp,
+    BinOp, Expr, Field, FieldInit, InputField, Item, MechanismField, Module, Name, ParamDecl,
+    RecordLit, RunClause, RunDecl, StateDecl, StepDecl, SweepClause, SystemDecl, TypeExpr, UnOp,
 };
 use crate::layout::Layout;
 use crate::token::{Span, Token, TokenKind};
@@ -22,6 +23,175 @@ impl<'src> Parser<'src> {
             tokens: Layout::new(src).collect(),
             pos: 0,
         }
+    }
+
+    fn expect_block_open(&mut self) -> Result<(), ParseError> {
+        self.expect(TokenKind::Colon, "`:`")?;
+        self.expect(TokenKind::NewLine, "end of line after `:`")?;
+        self.expect(TokenKind::Indent, "an indented block")?;
+        Ok(())
+    }
+
+    /// INPUT -> "input" " ":" NEWLINE INDENT INPUTFIELD+ DEDENT
+    fn parse_input(&mut self) -> Result<Vec<InputField>, ParseError> {
+        self.expect(TokenKind::Input, "`input`")?;
+        self.expect_block_open()?;
+
+        let mut fields = Vec::new();
+        while !self.at(TokenKind::Dedent) {
+            fields.push(self.parse_input_field()?);
+        }
+
+        self.expect(TokenKind::Dedent, "the end of the block")?;
+        Ok(fields)
+    }
+
+    /// INPUTFIELD -> NAME ":" TYPE "=" EXPR NEWLINE
+    fn parse_input_field(&mut self) -> Result<InputField, ParseError> {
+        let name = self.parse_name("an input field name")?;
+        self.expect(TokenKind::Colon, "`:` after the field name")?;
+        let ty = self.parse_type()?;
+        self.expect(TokenKind::Eq, "`=` followed by the inputs expression")?;
+        let value = self.parse_expr()?;
+        self.expect(TokenKind::NewLine, "end of line")?;
+        Ok(InputField { name, ty, value })
+    }
+
+    /// MECHANISM -> "mechanism" ":" NEWLINE INDENT MECHANISMFIELD+ DEDENT
+    fn parse_mechanism(&mut self) -> Result<Vec<MechanismField>, ParseError> {
+        self.expect(TokenKind::Mechanism, "`mechanism`")?;
+        self.expect_block_open()?;
+
+        let mut fields = Vec::new();
+        while !self.at(TokenKind::Dedent) {
+            fields.push(self.parse_mechanism_field()?);
+        }
+
+        self.expect(TokenKind::Dedent, "the end of the block")?;
+        Ok(fields)
+    }
+
+    /// MECHANISMFIELD -> NAME ":" EXPR NEWLINE
+    fn parse_mechanism_field(&mut self) -> Result<MechanismField, ParseError> {
+        let name = self.parse_name("a field name")?;
+        self.expect(TokenKind::Colon, "`:` after the field name")?;
+        let value = self.parse_expr()?;
+        self.expect(TokenKind::NewLine, "end of line")?;
+        Ok(MechanismField { name, value })
+    }
+
+    // STEP -> "step" NAME ":" NEWLINE INDENT [INPUT] MECHANISM DEDENT
+    fn parse_step(&mut self) -> Result<StepDecl, ParseError> {
+        self.expect(TokenKind::Step, "`step`")?;
+        let name = self.parse_name("a step name")?;
+        self.expect_block_open()?;
+
+        let inputs = if self.at(TokenKind::Input) {
+            self.parse_input()?
+        } else {
+            Vec::new()
+        };
+
+        if !self.at(TokenKind::Mechanism) {
+            return Err(self.error_here(format!(
+                "expected the `mechanism:` section, found {}",
+                self.describe_current()
+            )));
+        }
+
+        let mechanism = self.parse_mechanism()?;
+        self.expect(TokenKind::Dedent, "the end of the step")?;
+        Ok(StepDecl {
+            name,
+            inputs,
+            allowed: None,
+            mechanism,
+        })
+    }
+
+    /// FIELDINIT -> NAME ":" EXPR
+    fn parse_field_init(&mut self) -> Result<FieldInit, ParseError> {
+        let name = self.parse_name("a field name")?;
+        self.expect(TokenKind::Colon, "`:` after the field name")?;
+        let value = self.parse_expr()?;
+        Ok(FieldInit { name, value })
+    }
+
+    /// RECORD -> NAME "{" [ FIELDINIT ("," FIELDINIT)* [","] ] "}"
+    fn parse_record_lit(&mut self) -> Result<RecordLit, ParseError> {
+        let ty = self.parse_name("a state type name")?;
+        self.expect(TokenKind::LBrace, "`{` after the type name")?;
+        let mut fields = Vec::new();
+
+        while !self.at(TokenKind::RBrace) {
+            fields.push(self.parse_field_init()?);
+            if !self.eat(TokenKind::Comma) {
+                break;
+            }
+        }
+
+        self.expect(TokenKind::RBrace, "`,` or `}` after a field")?;
+        Ok(RecordLit { ty, fields })
+    }
+
+    /// SWEEP -> "sweep" NAME "in" "[" EXPR ("," EXPR)* [","] "]" NEWLINE
+    fn parse_sweep(&mut self) -> Result<SweepClause, ParseError> {
+        self.expect(TokenKind::Sweep, "`sweep`")?;
+        let param = self.parse_name("a parameter name")?;
+        self.expect(TokenKind::In, "`in` after the parameter name")?;
+        self.expect(TokenKind::LBracket, "`[` to start the list of values")?;
+        let mut values = vec![self.parse_expr()?];
+
+        while self.eat(TokenKind::Comma) {
+            if self.at(TokenKind::RBracket) {
+                break;
+            }
+
+            values.push(self.parse_expr()?);
+        }
+
+        self.expect(TokenKind::RBracket, "`,` or `]` after a value")?;
+        self.expect(TokenKind::NewLine, "end of line")?;
+        Ok(SweepClause { param, values })
+    }
+
+    /// CLAUSE -> SWEEP (more to come: until, runs, seed, etc)
+    fn parse_run_clause(&mut self) -> Result<RunClause, ParseError> {
+        match self.peek() {
+            Some(TokenKind::Sweep) => Ok(RunClause::Sweep(self.parse_sweep()?)),
+            _ => Err(self.error_here(format!(
+                "expected a run clause such as `sweep`, found {}",
+                self.describe_current()
+            ))),
+        }
+    }
+
+    /// RUN -> "run" NAME "from" RECORD "for" EXPR "steps" NEWLINE [ INDENT CLAUSE+ DEDENT ]
+    fn parse_run(&mut self) -> Result<RunDecl, ParseError> {
+        self.expect(TokenKind::Run, "`run`")?;
+        let system = self.parse_name("a system name")?;
+        self.expect(TokenKind::From, "`from` followed by the initial state")?;
+        let initial = self.parse_record_lit()?;
+        self.expect(TokenKind::For, "`for` followed by the step count")?;
+        let steps = self.parse_expr()?;
+        self.expect(TokenKind::Steps, "`steps` after the step count")?;
+        self.expect(TokenKind::NewLine, "end of line")?;
+        let mut clauses = Vec::new();
+
+        if self.eat(TokenKind::Indent) {
+            while !self.at(TokenKind::Dedent) {
+                clauses.push(self.parse_run_clause()?);
+            }
+
+            self.expect(TokenKind::Dedent, "the end of the runs clauses")?;
+        }
+
+        Ok(RunDecl {
+            system,
+            initial,
+            steps,
+            clauses,
+        })
     }
 
     fn peek(&self) -> Option<TokenKind> {
@@ -121,7 +291,7 @@ impl<'src> Parser<'src> {
             let Some((op, left_bp, right_bp)) = binary_op(kind) else {
                 break;
             };
-            if left_bp > min_bp {
+            if left_bp < min_bp {
                 break;
             }
 
@@ -178,7 +348,7 @@ impl<'src> Parser<'src> {
         Ok(Field { name, ty })
     }
 
-    /// MODULE -> ITEM*  ITEM -> PARAM | STATE | SYSTEM
+    /// MODULE -> ITEM*  ITEM -> PARAM | STATE | SYSTEM | STEP
     fn parse_module(&mut self) -> Result<Module, ParseError> {
         let mut items = Vec::new();
         while let Some(kind) = self.peek() {
@@ -186,6 +356,8 @@ impl<'src> Parser<'src> {
                 TokenKind::Param => Item::Param(self.parse_param()?),
                 TokenKind::State => Item::State(self.parse_state()?),
                 TokenKind::System => Item::System(self.parse_system()?),
+                TokenKind::Step => Item::Step(self.parse_step()?),
+                TokenKind::Run => Item::Run(self.parse_run()?),
                 _ => {
                     return Err(self.error_here(format!(
                         "expected a declaration, found {}",
