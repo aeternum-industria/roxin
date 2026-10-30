@@ -1,4 +1,4 @@
-# Roxin
+# <img src="assets/roxin-logo-black.svg" width="36" />Roxin
 
 **A language for describing how a system changes, who decides what happens next, and what must never go wrong.**
 
