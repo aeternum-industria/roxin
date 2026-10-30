@@ -17,7 +17,6 @@ use roxin::token::Span;
     disable_help_flag = false,
     disable_version_flag = false
 )]
-
 struct Args {
     #[arg(value_name = "SOURCEFILE")]
     source_file: Option<PathBuf>,

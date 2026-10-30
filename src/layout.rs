@@ -56,7 +56,7 @@ impl<'src> Layout<'src> {
         let spaces = leading.len();
         let mut target = spaces / 4; // TODO: Maybe allow 2/4 space indents both? TBD.
 
-        if spaces % 4 != 0 {
+        if !spaces.is_multiple_of(4) {
             self.pending
                 .push_back(Self::error_token(LexError::BadIndent, line_start, at));
         }

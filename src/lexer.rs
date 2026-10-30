@@ -97,12 +97,11 @@ impl<'src> Lexer<'src> {
             self.pos += 1;
         }
 
-        if let Some(ch) = self.peek_char() {
-            if !ch.is_ascii() && ch.is_alphanumeric() {
+        if let Some(ch) = self.peek_char()
+            && !ch.is_ascii() && ch.is_alphanumeric() {
                 self.eat_word();
                 return TokenKind::Error(LexError::NonAsciiIdentifier);
             }
-        }
 
         keyword(&self.src[start..self.pos]).unwrap_or(TokenKind::Identifier)
     }
