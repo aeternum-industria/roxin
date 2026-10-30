@@ -520,15 +520,4 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 ---
 
 ## License
-
-Not yet chosen.
-
----
-
-## Open Questions
-
-Questions are worked through in order.
-
-| # | Question | Why it matters |
-|---|---|---|
-| Q1 | For GDS practitioners: was dropping admissibility from the reference code deliberate? Is the optional input stage intended? Are metrics part of the formalism? Does cadCAD intentionally merge same-named policy outputs, and how? What did the Julia and Rust efforts learn? | The specification and implementation disagree on several of these. This one needs answers from outside the project. |
+BSD 2-Clause - See [LICENSE](LICENSE) for details.
