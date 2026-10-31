@@ -73,7 +73,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-34 | Structural type equality for states and records | open | — | — | Lean is exact structural equality; width subtyping and row polymorphism later |
 | LANG-36 | `map` / `filter` / `fold` over collections | open | — | — | Depends on lists/maps. Termination as an opt-in guarantee |
 | LANG-37 | `extern` — foreign code | deferred | — | §11 | Four placeholder rules hold the door open: one function registry, effect labels, `extern` reserved, effects never inside mechanisms. WebAssembly is the first candidate |
-| LANG-38 | Restricted state update map `f\|_x` | deferred | — | — | Paper Def 2.7; the object an inductive proof quantifies over. Nobody implements it, including gds-core |
+| LANG-38 | Restricted state update map `f\|_x` | deferred | — | — | Paper Def 2.7 — `f` with the state fixed, leaving only the input free. Its *image* is Def 4.1's `R(x)`, so RUN-25 surfaces it even though the map itself stays internal. The object an inductive proof quantifies over. Nobody implements it, including gds-core |
 
 ## 2. Syntax and lexing
 
@@ -143,7 +143,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-09 | Randomness legal only in `input:` | designed | [D7](#d7-random-numbers-use-pinned-algorithms-so-runs-reproduce-exactly) | §7 | **Warranted by paper Def 2.4** — stochastic influence enters as an input |
 | RUN-10 | Results schema | designed | — | §6.2 | Columns listed in §6.2. **Hardest thing to change later** — every export format and downstream analysis sees it |
 | RUN-11 | Machine-readable output mode (NDJSON) | open | — | — | Would make the pretty format non-load-bearing, make float-tolerance comparison numeric, and deliver §6.2 early. **Decide before writing the test harness** |
-| RUN-12 | KPI level (per-run, per-configuration) | open | — | — | `runs 1000` is meaningless without "mean final balance across runs". gds-core calls this `psuu.KPI` = Metric + Aggregation. Use `kpi` — the ecosystem's word |
+| RUN-12 | KPI level (per-run, per-configuration) | open | — | — | **Now in question under D17**: computable from the output table alone, so by that test it falls outside the language. gds-core reaches the same line by putting `psuu.KPI` in a separate package. Needs an explicit call |
 | RUN-13 | CSV / Parquet / Vega-Lite export | designed | — | §11 | — |
 | RUN-14 | Parallel jobs, result store, checkpoint/resume | designed | — | §11 | Jobs are independent, so results must not change |
 | RUN-15 | `record substeps` | designed | — | §5 | Syntax provisional |
@@ -155,6 +155,9 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-21 | Self-describing results | designed | — | §6.2 | Results record the effective settings used (seed, tolerance, step counting), so a file describes how it was produced |
 | RUN-22 | Global mutable state | rejected | — | — | An experiment is a value, not an entry in a global registry |
 | RUN-23 | Panic on closed stdout | defect | — | — | `roxin f.rox \| head` panics with a broken pipe. Unpleasant in exactly the pipelines fixtures and `verify_docs.py` use (severity low) |
+| RUN-24 | Model and experiment as separate categories | designed | D16 | §3 | Parser and interpreter collect one flat item list today. Prerequisite for the REPL (TOOL-20) and for any exploration form |
+| RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
+| RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships |
 
 ## 7. Tooling, testing, release
 
@@ -179,7 +182,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | TOOL-17 | Tree-sitter grammar | deferred | — | — | Unifies all editors + GitHub highlighting, but duplicates the parser against moving syntax. Revisit ~M8 |
 | TOOL-18 | Stability table (what is / is not semver-protected) | open | — | — | Must declare pretty output and error wording **unstable**, or RUN-20 becomes a breaking change forever |
 | TOOL-19 | Two-axis versioning (implementation vs language level) | open | — | — | A change that alters what existing source *means* is the only kind that can cost someone a wrong result |
-| TOOL-20 | REPL | defect | — | §11 | Reads one line and parses it as a whole module, so no indented declaration can ever be typed. Either a continuation reader or scope it down to expressions |
+| TOOL-20 | REPL | defect | — | §11 | Reads one line and parses it as a whole module, so no indented declaration can ever be typed. D16 gives the fix: load the model once, then accept experiment statements against it |
 | TOOL-21 | `unknown_sweep_param.expected` is stale | defect | — | — | Build now adds line/column. The analogous path in `eval_params` still uses `Span {0,0}` (severity low) |
 | TOOL-23 | Syntax for experiments and A/B variants | open | — | — | Currently a sketch. Interacts with named `input map` |
 
@@ -537,6 +540,61 @@ be modelled by swapping which step is active.
 
 **Revisit if.** A real model needs a genuinely unbounded admissible set for some states and sampling mode is
 not an acceptable answer.
+
+---
+
+## D16. Model and experiment are separate categories
+
+**Decision.** A `.rox` file holds two kinds of declaration. **Model** forms — `param`, `state`, `step`,
+`system`, `invariant`, `type`, `data`, `tolerance` — define what the system *is*. **Experiment** forms — `run`
+and its clauses, and any future exploration form — define a question asked *of* it. The engine loads the model
+once; experiment forms are applied to it.
+
+**Alternatives considered.** Treat every top-level declaration uniformly, as the parser does today.
+
+**Why.**
+- The split already existed and was simply unnamed: `run Thermostat from Room { temp: 10 } for 8 steps` was
+  never part of the system's definition.
+- It is what makes a REPL possible — load the model, then accept experiment statements. Today's REPL parses
+  each line as a whole module, which is why no indented declaration can be typed into it (registry TOOL-20).
+- It settles where exploration belongs. An exploration statement is an experiment form, not a debugging
+  directive embedded in the model, so a model never changes depending on whether it is being inspected. A
+  breakpoint written into a model would destroy the reproducibility that is the point of having one.
+- It makes "one model, three questions" structural rather than aspirational: simulate, reach and check become
+  three experiment forms over one model definition.
+
+**Costs.** The parser and interpreter must distinguish the two categories instead of collecting a flat list of
+items. A file carrying no experiment form is valid and does nothing.
+
+**Revisit if.** Model and experiment need to live in separate files — which this permits but does not require.
+
+---
+
+## D17. Roxin computes what needs the model; everything else is the export layer
+
+**Decision.** A capability belongs in Roxin when computing it requires evaluating the model. Anything
+computable from the output table alone is out of scope and belongs to the export layer.
+
+**Alternatives considered.** A post-run analysis subcommand reading a results file.
+
+**Why.**
+- The test is capability, not taste. `R(x)` requires calling `allowed` and the mechanism on states that were
+  never visited, so a tool holding only a results file structurally cannot compute it — no amount of
+  post-processing recovers what *might* have happened.
+- Conversely a chart, a report or a summary statistic needs only the table, and mature tools already exist for
+  every one of them. Competing with them would grow a second half of the language that earns nothing.
+- It gives the scope section a sharp edge it previously lacked, replacing "we do simulation" with a question
+  anyone can apply to a proposed feature.
+
+**Consequences.** In: reachability, the state explorer, `invariant` (D8 stops the job, which changes the
+trajectory, so it must run in the loop) and `until`. Out: plots, reports, dashboards. Per-run and
+per-configuration KPIs are computable from the table and therefore fall outside by this test — recorded as an
+open question rather than settled, since it reverses an earlier assumption.
+
+**Costs.** A user wanting a summary number must export and compute it elsewhere.
+
+**Revisit if.** A derived quantity is needed *during* a run in order to steer it, which would make it part of
+execution rather than analysis.
 
 ---
 

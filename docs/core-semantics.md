@@ -105,6 +105,11 @@ Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `to_float
 | `data name = csv("file")` | an external series, loaded before the run |
 | `run ...` | one experiment (section 6) |
 
+These forms fall into two categories (D16). **Model** forms — `param`, `tolerance`, `type`, `state`,
+`input map`, `step`, `system`, `invariant`, `metric`, `data` — define what the system *is*. **Experiment**
+forms — `run` and its clauses — define a question asked *of* it. The engine loads the model once and applies
+experiment forms to it; a file carrying no experiment form is valid and does nothing.
+
 Name resolution is by declaration, in any order. Names are unique within their kind. Circular type aliases are errors.
 
 ## 4. One step
