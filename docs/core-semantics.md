@@ -1,12 +1,20 @@
 # Roxin Core Semantics (draft 0)
 
-**Status:** draft for review. Nothing here is settled until it appears in the README's decided table.
+**Status:** draft for review. Nothing here is settled until it has a decision record in [`registry.md`](registry.md).
 
-**Purpose:** say precisely what a Roxin program *means*, independent of how it is written. The surface syntax is still provisional and may change; the semantics below are what the oracle evaluator and the VM must both implement. Where this document and the README disagree, the README wins until the disagreement is resolved.
+**Purpose:** say precisely what a Roxin program *means*, independent of how it is written. The surface syntax is still provisional and may change; the semantics below are what the oracle evaluator and the VM must both implement. Where this document and [`registry.md`](registry.md) disagree, the registry wins until the disagreement is resolved.
 
-**Reasoning for every settled decision lives in `docs/decisions.md`.**
+**Reasoning for every settled decision lives in `docs/registry.md`.**
 
-**How to read it.** Items marked **[settled]** come from the README's decided table. Items marked **[D1]**, **[D2]**, and so on are proposals that need your decision; they are collected in section 12 so we can go through them one at a time. Code blocks show *illustrative* syntax only.
+**How to read it.** Every section below carries a **Layer** marker:
+
+| Layer | Meaning |
+|---|---|
+| **formalism** | Corresponds to a definition in Zargham & Shorish, *GDS Part I*. Changing it diverges from the paper, and the divergence should be deliberate and recorded. |
+| **substrate** | Language machinery the paper never addresses — types, numbers, checking, errors. Free design space; constrained only by our own decisions. |
+| **workflow** | The experiment loop — runs, sweeps, jobs, seeding, results. Outside the formalism, in scope because it serves the practice. |
+
+Decision records (D-numbers) live in [`registry.md`](registry.md). Code blocks show *illustrative* syntax only.
 
 ---
 
@@ -21,6 +29,8 @@ The semantics has three layers:
 3. **One run** (section 6): how steps repeat, when a job stops, and what is recorded.
 
 ## 2. Values and types
+
+> **Layer:** substrate — the paper's state space is "a collection of all objects X" and says nothing about numeric types, equality or arithmetic. All of this is ours.
 
 | Type | Meaning | Notes |
 |---|---|---|
@@ -79,6 +89,8 @@ Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `to_float
 
 ## 3. Declarations
 
+> **Layer:** mixed — `state`, `step`, `system` and `input map` are **formalism** (Defs 2.1, 2.8, 2.9, and closure under composition). `param`, `tolerance`, `type`, `data` are **substrate**; `metric` and `run` are **workflow**.
+
 | Form | Meaning |
 |---|---|
 | `param name: Type = default` | a per-job constant, visible in every expression |
@@ -97,6 +109,8 @@ Name resolution is by declaration, in any order. Names are unique within their k
 
 ## 4. One step
 
+> **Layer:** formalism — this is the canonical form, equations (1) and (2): the Input Map `g` (Def 2.8), the Admissible Input Map `U` (Def 2.5), and the State Update Map `f` (Def 2.6), composing to `h` (Def 2.9).
+
 A step has three parts. The first two are optional together: a step with no `input:` has no `allowed:` (nothing to constrain) and `u` is the empty record.
 
 Given the current state `s`, the step index `k` (section 5), and the parameters:
@@ -111,6 +125,8 @@ The result is the new state. It must have the state type; the checker verifies t
 
 ## 5. Systems and the step index
 
+> **Layer:** mixed — composition of steps is **formalism** (the abstract's closure under composition). The `step` index is **substrate**: the paper's `h : X → X` is autonomous, so a time index is our addition, justified as sugar for a counter in the state.
+
 A system applies its steps in order, each step taking the previous step's output as its `s`. One pass through all steps is one **system step**.
 
 - `step` is the index `k` of the system step being computed, counting from 1 **[settled]**. Every step inside one system step sees the same `k`.
@@ -119,6 +135,8 @@ A system applies its steps in order, each step taking the previous step's output
 - Steps must each map the state type to itself; the checker verifies the composition **[settled]**.
 
 ## 6. One run
+
+> **Layer:** workflow — only the Trajectory (Def 2.3) is formalism. Step counts, `until`, sweeps, jobs and the results schema are the experiment loop and have no counterpart in the paper.
 
 A run supplies: a system, an initial state, a step count `N`, optional `until` predicate, parameter overrides (sweeps), a Monte Carlo count, a seed, and recording options. For a single job:
 
@@ -162,6 +180,8 @@ Metrics and invariants are pure functions of the state and parameters. They may 
 
 ## 7. Randomness
 
+> **Layer:** mixed — that stochastic influence enters as an *input* is **formalism** (Def 2.4's note: uncertainty is treated in the same framework as determinism). The specific generator, seeding and Box–Muller are **substrate**.
+
 `sample` functions are the only source of randomness and are legal only in `input:` expressions **[settled]**.
 
 Reproducibility requirements, which the oracle and the VM must both meet:
@@ -177,6 +197,8 @@ Reproducibility requirements, which the oracle and the VM must both meet:
 
 ## 8. `allowed`
 
+> **Layer:** formalism — Def 2.5, the Admissible Input Map `U : X → ℘(U)`. Bounds that depend on state are the definition itself, not an extension. The enumeration rules exist to serve Def 4.1, `R(x) = ∪_{u∈U_x} f(x,u)`.
+
 `allowed:` is a conjunction of clauses joined by `and`. Each clause is either:
 
 - **a membership clause** `field in set`, or
@@ -190,6 +212,8 @@ Meaning:
 - **Menu (reachability, later).** The admissible set is the product of the membership sets, filtered by the predicates. It is **enumerable** only if every input field has a membership clause whose set is finite: an `int` range, a `decimal(N)` range (stepping by 10^-N), a finite set, or a choice type. A `float` range is not enumerable. Reachability on a step with a non-enumerable input is an error unless a sampling mode is chosen. Reachability ignores the `input:` expressions and iterates the menu **[settled lean]**.
 
 ## 9. Check-time (static) rules
+
+> **Layer:** substrate — the paper has no checker. Every rule here is ours, and each one should trace to a decision record.
 
 Before any run, the checker verifies:
 
@@ -205,6 +229,8 @@ Before any run, the checker verifies:
 10. reachability requests are made only on models whose state has a `tolerance` if it has float fields **[settled]**.
 
 ## 10. Errors
+
+> **Layer:** substrate — the paper has no failure model. Note D4 (NaN/infinity/divide-by-zero stops the job) is where this layer pushes back on the formalism, which would happily let a trajectory continue.
 
 | Error | When | Recorded |
 |---|---|---|
@@ -232,10 +258,10 @@ We will go through these one at a time. Each has my proposal.
 | D4 | NaN, infinity, division by zero | **Settled:** errors that stop the job, recorded with step, field, and expression; other jobs continue. No propagate mode for now. |
 | D5 | Integer division | **Settled:** `//` floors, `%` is floored modulo (`a == (a // b) * b + a % b`), and plain `/` on `int` is a type error. May be revisited. |
 | D6 | Relative tolerance | **Settled:** relative to `max(\|a\|, \|b\|)`. See the rationale after section 2.1's rules. |
-| D7 | Random generator | **Settled:** xoshiro256++ seeded by SplitMix64; Box–Muller for `normal`; a pinned pure-Rust math library for bit-identical streams. Reasoning in `docs/decisions.md`. |
-| D8 | Violating state | **Settled:** recorded as the job's final row, flagged with the invariant's name. Reasoning in `docs/decisions.md`. |
-| D9 | Decimal multiplication and division | **Settled:** `decimal(N) * decimal(M)` is exact and gives `decimal(N+M)`; `decimal(N) * int` stays `decimal(N)`; `/` only appears as the direct argument of `round`. Reasoning in `docs/decisions.md`. |
-| D10 | Order of checks in a run | **Settled:** invariants on the initial state first; `until` before each step; invariants after each step. Reasoning in `docs/decisions.md`. |
+| D7 | Random generator | **Settled:** xoshiro256++ seeded by SplitMix64; Box–Muller for `normal`; a pinned pure-Rust math library for bit-identical streams. Reasoning in `docs/registry.md`. |
+| D8 | Violating state | **Settled:** recorded as the job's final row, flagged with the invariant's name. Reasoning in `docs/registry.md`. |
+| D9 | Decimal multiplication and division | **Settled:** `decimal(N) * decimal(M)` is exact and gives `decimal(N+M)`; `decimal(N) * int` stays `decimal(N)`; `/` only appears as the direct argument of `round`. Reasoning in `docs/registry.md`. |
+| D10 | Order of checks in a run | **Settled:** invariants on the initial state first; `until` before each step; invariants after each step. Reasoning in `docs/registry.md`. |
 
 **Verification note (D1).** Unbounded integers map directly onto the integer theory of SMT solvers, so proofs about a model never need bit-vector reasoning about wraparound. Overflow is a stated property (`invariant NoOverflow(s) = s.balance < 2^256`) instead of hidden operator behavior. A model of a contract that wraps or reverts at a fixed width is an abstraction unless that bound is stated, so the guides must say so.
 

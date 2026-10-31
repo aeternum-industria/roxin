@@ -185,7 +185,7 @@ Each guide ends with a glossary that maps *your field's words* to the Roxin term
 | Lists, maps, agent populations | **[exploring]** | needed by agent-based models; not specified |
 | Local `let`, bounded loops, float/int conversions | **[exploring]** | collected from real cadCAD models |
 
-The test suite includes [52 models](docs/development-notes.md#implementation-status) with independently derived expected outputs. 32 run on today's build; the other 20 are written in advance, so each feature arrives with a ready-made test.
+The test suite includes [52 models](docs/registry.md) with independently derived expected outputs. 32 run on today's build; the other 20 are written in advance, so each feature arrives with a ready-made test.
 
 ---
 
@@ -316,7 +316,7 @@ A run says `runs 1000` and `seed 42`. Without a seed, a random one is drawn, sav
 
 ## How the math works, and why
 
-Roxin's numbers are deliberately strict. This section is the reasoning behind the choices that most surprise people. Each links to the decision log, `docs/decisions.md`, which records the alternatives considered, the costs, and what would make us revisit.
+Roxin's numbers are deliberately strict. This section is the reasoning behind the choices that most surprise people. Each links to the decision log, `docs/registry.md`, which records the alternatives considered, the costs, and what would make us revisit.
 
 ### There is no default number type **[designed]**
 
@@ -468,7 +468,7 @@ The comparison below was written after reading every notebook and model in the p
 - **Boundary rule.** A default is acceptable where the common case is clear and a wrong default is visible and harmless (the seed, the progress bar). Where a wrong default could silently weaken a guarantee (number types, float tolerance), the author decides and the checker refuses to guess.
 - **Verification rule.** Every feature must state how a solver would see it, or be marked unverifiable. The language is designed so that properties can be checked or proved, not only observed. The central proof is an inductive invariant: it holds at the start, and for every state satisfying it and every legal input, the mechanism's result satisfies it again.
 - **Neutral, checkable documentation.** Claims are tied to evidence (a fixture, a decision record, a source). Comparisons say what was seen where.
-- **Written by hand.** The implementation is written entirely by hand. AI assistance is limited to documentation, brainstorming, review, and explanation (policy P1, `docs/decisions.md`).
+- **Written by hand.** The implementation is written entirely by hand. AI assistance is limited to documentation, brainstorming, review, and explanation (policy P1, `docs/registry.md`).
 
 ---
 
@@ -494,7 +494,7 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 |---|---|
 | [`docs/guides/`](docs/guides/README.md) | GDS taught from the point of view of a field (games, finance, life sciences, control, collective decision-making) |
 | [`docs/core-semantics.md`](docs/core-semantics.md) | what a program *means*, precisely, with verified test vectors |
-| [`docs/decisions.md`](docs/decisions.md) | every design decision: alternatives, reasoning, costs, revisit triggers |
+| [`docs/registry.md`](docs/registry.md) | source of truth: feature status, open questions, and every decision with alternatives, reasoning, costs, revisit triggers |
 | [`docs/development-notes.md`](docs/development-notes.md) | implementation status, roadmap, defaults, risks, known gaps |
 | [`examples/`](examples/) | the models used in this README and the guides |
 
@@ -504,7 +504,7 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 
 **In this repository**
 
-- `docs/decisions.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D13 and project policy P1)
+- `docs/registry.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D13 and project policy P1)
 - `docs/core-semantics.md`: draft precise semantics and verified test vectors
 
 **External**
