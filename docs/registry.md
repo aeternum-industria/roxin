@@ -39,7 +39,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-01 | `param` with typed default | runs | — | §3 | See NUM-08, NUM-09 for evaluation-order issues |
 | LANG-02 | `state` record declaration | runs | — | §3 | Only `int`/`float`/`bool` work at runtime; `decimal` and named types error |
 | LANG-03 | `step` with `input:` / `mechanism:` | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), [D3](#d3-input-fields-are-independent) | §4 | — |
-| LANG-04 | `system` with `>>` composition | runs | — | §5 | — |
+| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard |
 | LANG-05 | `run … from … for N steps` | runs | — | §6 | — |
 | LANG-06 | `sweep` (Cartesian product) | runs | — | §6.1 | Zip-style sweeps unresolved — see RUN-04 |
 | LANG-07 | Mechanism must set every field exactly once | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Enforced at run time, first step only; moves to checker — see CHK-01 |
@@ -63,7 +63,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-25 | Sum types with payloads + `match` | open | — | — | cadCAD models pass strings and `'N/A'` padding for action dispatch; this is the typed replacement |
 | LANG-26 | Float↔int conversions, integer sqrt, non-integer powers | open | — | §11 | Which math functions ship in v1 |
 | LANG-27 | Bounded iteration | open | — | — | A line-search `while` loop appears in a cadCAD control model |
-| LANG-28 | Output map `y = C(x, d)` | deferred | — | — | **Prerequisite for subsystem composition (M9).** gds-core's Tier 0 blocker; both paper authors are arguing about it. Read their resolution first |
+| LANG-28 | Output map `y = C(x, d)` | deferred | — | — | **Prerequisite for subsystem composition (M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
 | LANG-29 | Mark input fields `decision` vs `disturbance` | deferred | — | — | Part I Def 2.4 deliberately unifies them, so this is an extension, not a fix. Needed only if controllability (∃ input) is ever asked alongside safety (∀ input) |
 | LANG-29 | Continuous time / ODE | rejected | — | — | Out of scope. Note Def 2.6 itself calls `f` a discrete transition |
 | LANG-30 | Non-Markovian state history | rejected | — | — | cadCAD passes `StateHistory` everywhere; this violates Def 2.9 `h : X → X`. History goes in state explicitly |
@@ -643,3 +643,48 @@ the mechanism's result satisfies it again. Proof support is planned, not built.
 | `sample` | a nondeterministic choice: the proof must hold for every outcome | moderate |
 | `float` | best effort (D11): a tolerance larger than the provable error bound gives *proved*; otherwise *checked on N runs* or *unverified* | hard |
 | Lists and maps | need quantifiers or bounded unrolling | hard |
+
+## Vocabulary lineage: cadCAD-ri, GDS, Roxin
+
+The cadCAD reference implementation (`cadcad-ri`, documented at `cadcad.readthedocs.io`, last pushed December
+2023) rested on a vocabulary the GDS papers do not use: **Dimension** (a data type restricting information to a
+shape), **Space** (a collection of dimensions), **Block** (an input space and an output space plus a function
+translating between them, those spaces being its **domain** and **codomain**), **Point** (an instance
+satisfying a space), and **dynamics** for composed blocks. Roxin uses none of these words. Two separate things
+account for that, and only one is a change of substance.
+
+**Half of it was a type system.** By the RI's own definitions a dimension is a type, a space is a record type,
+and a point is a value of that type. A formalism need not specify a type system; an implementation must. So
+Part I can say the State Space is "the collection of all objects X" and stop, leaving every implementation to
+arrive at the same three concepts independently — `TypeDef` / `Space` / entity instance in gds-core, `type` /
+`state` / record value in Roxin. Nothing was lost in the rename: `state Room { temp: float }` *is* a space
+composed of dimensions, and `Room { temp: 10 }` *is* a point.
+
+Worth noting what that rename is worth in a host language. The RI's `Dimension` API carries `copy()`,
+`freeze()`, `is_frozen()` and name-collision resolution through an explicit `names=[…]` override — machinery
+that exists because Python cannot state "this record has exactly these typed fields" in a form a framework can
+enforce. In Roxin that is one declaration and the checker enforces it; the entire API evaporates. This is the
+most concrete instance of the general case for a language over a library, and it is a property of the host, not
+a criticism of the design.
+
+**The other half was a change of mathematical tradition.** Block / domain / codomain / composition is the
+vocabulary of applied category theory; state / input / trajectory / reachability is the vocabulary of control
+theory (Roxin 1965, Smirnov, Sontag). Part I makes the choice explicitly, observing that ACT "derives strong
+results from composability (as does, to a lesser extent, GDS), but can be difficult to implement in a
+computational environment."
+
+That is a trade, not an upgrade. The control vocabulary is what makes Sections 3 and 4 possible — attainability,
+reachability, configuration space, controllability, properties along a trajectory. A block is a single morphism
+and has no notion of where a system can reach in `n` steps. What the categorical vocabulary offers in exchange
+is native composition of parts whose interfaces differ, which the state/input vocabulary does not express.
+
+Both halves are visible in practice. gds-core reintroduced `Block`, `Space` and composition operators over GDS
+semantics, and the open question its reviewers rank highest is `ControlAction` — the output map `y = C(x, d)`
+and the controller-plant duality it supports. That is exactly the seam between the two traditions, and it is
+under active work by the paper's authors.
+
+**What this means for Roxin.** `system S: State = A >> B` composes steps that each map the state type to
+itself. Composition is free in that setting *because* domain and codomain coincide — it is the degenerate case.
+Subsystem composition (LANG-28) needs parts whose interfaces differ, which means an output map, which means
+importing a notion the GDS vocabulary does not supply. Expect it to feel like a foreign body; historically it
+is one. The RI's domain/codomain framing is the prior art to read first.
