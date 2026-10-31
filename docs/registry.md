@@ -39,7 +39,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-01 | `param` with typed default | runs | — | §3 | See NUM-08, NUM-09 for evaluation-order issues |
 | LANG-02 | `state` record declaration | runs | — | §3 | Only `int`/`float`/`bool` work at runtime; `decimal` and named types error |
 | LANG-03 | `step` with `input:` / `mechanism:` | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), [D3](#d3-input-fields-are-independent) | §4 | — |
-| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard |
+| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard. **Zero usage: 0 of 66 `system` declarations in the corpus use `>>`** — D2 removed its main motivation, since one mechanism writes the whole state where cadCAD needed a chain of blocks. It earns its keep only where *order* matters (settle → charge → accrue; turn order). Needs a motivating fixture — see TOOL-24 |
 | LANG-05 | `run … from … for N steps` | runs | — | §6 | — |
 | LANG-06 | `sweep` (Cartesian product) | runs | — | §6.1 | Zip-style sweeps unresolved — see RUN-04 |
 | LANG-07 | Mechanism must set every field exactly once | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Enforced at run time, first step only; moves to checker — see CHK-01 |
@@ -156,8 +156,10 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-22 | Global mutable state | rejected | — | — | An experiment is a value, not an entry in a global registry |
 | RUN-23 | Panic on closed stdout | defect | — | — | `roxin f.rox \| head` panics with a broken pipe. Unpleasant in exactly the pipelines fixtures and `verify_docs.py` use (severity low) |
 | RUN-24 | Model and experiment as separate categories | designed | D16 | §3 | Parser and interpreter collect one flat item list today. Prerequisite for the REPL (TOOL-20) and for any exploration form |
-| RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
+| RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17, D18 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
 | RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships |
+| RUN-27 | Type-derived membership sets | open | — | §8 | A `bool` input has exactly two admissible values with no `allowed` written at all; a choice type has as many as it has options. Enumerability is partly a property of the **type**, not only the clause — so bool and choice inputs may be explorable with zero author effort, which likely makes the best first demo |
+| RUN-28 | Invariant-violating successors in fan-out | open | — | §8 | D8 covers runs: the violating state is the flagged final row. Exploration exists to show what *could* happen, so the argument is that they appear and are marked. This is the choice that makes the explorer useful for safety work rather than curiosity |
 
 ## 7. Tooling, testing, release
 
@@ -185,6 +187,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | TOOL-20 | REPL | defect | — | §11 | Reads one line and parses it as a whole module, so no indented declaration can ever be typed. D16 gives the fix: load the model once, then accept experiment statements against it |
 | TOOL-21 | `unknown_sweep_param.expected` is stale | defect | — | — | Build now adds line/column. The analogous path in `eval_params` still uses `Span {0,0}` (severity low) |
 | TOOL-23 | Syntax for experiments and A/B variants | open | — | — | Currently a sketch. Interacts with named `input map` |
+| TOOL-24 | Integration models in the fixture corpus | open | — | — | The 52 fixtures are unit-level — goldens, error cases, stress — and nothing exercises several features at once, which is where flaws *between* features surface. `pending/` is the right home but all 20 are one-feature-ahead and simple. Cheapest first multi-step fixture: a **betting round** (P1 bets, P2 reacts, P3 reacts) — pure sequencing over scalar state, needs only `if/then/else` and `allowed`. Larger targets: the paper's three §5.1 models (insurance contract, two-asset Balancer pool, governance with parameters in state), all naturally multi-step and order-dependent, and never written as Part II |
 
 ---
 
@@ -598,6 +601,44 @@ execution rather than analysis.
 
 ---
 
+## D18. The explorer's unit is a step; the tick is derived
+
+**Decision.** Step-level fan-out is the primitive: from a state `x`, enumerate one step's admissible inputs and
+apply its mechanism. Tick-level fan-out is derived by folding that over the system's step chain. The default
+presentation is the **tick**, because that is what a results row means; step-level is available for debugging —
+"step into" against "step over". Reachability and the configuration space `X_C` are computed from the tick path
+only.
+
+**Alternatives considered.**
+- *Step only.* Matches Definition 4.1 exactly, since a Roxin `step` is the paper's `f`. Smallest fan-out and the
+  better debugging primitive. Rejected because iterating step-level reachability admits intermediate states that
+  never appear at a tick boundary, which makes Definition 4.2's configuration space wrong.
+- *Tick only.* Matches the trajectory, keeps `X_C` correct, and aligns with D10's per-tick invariant checks.
+  Rejected because it computes the intermediate states internally and then discards exactly the information that
+  makes the tool useful for finding bugs, and because fan-out multiplies per step with no indication of which
+  step's choice drove an outcome.
+
+**Why.** The two meanings are genuinely different and both are wanted; picking one silently breaks either `X_C`
+or debuggability. The layering is also the natural implementation — build step fan-out once, fold it over the
+chain — and "step into / step over" is vocabulary users already have.
+
+**Note on shape.** Tick-level fan-out is a **dependent** product, not a flat one. Choosing `u_A ∈ U_A(x)`
+produces an intermediate state, and only then is `U_B` determined, because B's bounds are expressions over what
+A produced. Ten options in A followed by ten in B gives 100 tick-successors through 10 intermediate states.
+D3's independence of input fields holds *within* a step and explicitly not *across* steps in a chain. A
+tick-level edge is therefore labelled by a tuple of per-step inputs, which RUN-26's schema must accommodate.
+
+**Costs.** Two concepts to document and two modes in the tool.
+
+**Sequencing.** No model in the corpus is multi-step — 0 of 66 `system` declarations use `>>` — so the two paths
+are currently indistinguishable. Implement the tick path first; the step path only becomes observable once a
+multi-step model exists.
+
+**Revisit if.** Real multi-step models show users reaching for step-level far more than tick-level, which would
+argue for flipping the default.
+
+---
+
 # Part 3 — Reference
 
 ## Project facts worth not re-deriving
@@ -609,6 +650,8 @@ execution rather than analysis.
 | Reachability design is Definition 4.1 | `R(x) := ∪_{u∈U_x} {f(x,u)}` — enumerate `allowed`, ignore `g`. Cite it |
 | cadCAD has no metric concept | All 15 occurrences are bookkeeping columns. Roxin's `metric` came from PSUU/BlockScience practice, not cadCAD |
 | cadCAD has no admissibility vocabulary | `admissib` 0, `invariant` 0, `feasible` 0, `legal` 0, `constraint` 0 across the whole repo |
+| No model in the corpus is multi-step | 0 of 66 `system` declarations use `>>`. D2 removed its motivation — one mechanism writes the whole state, where cadCAD needed a chain of blocks. `>>` earns its keep only where order matters |
+| A card game is the wrong first multi-step model | The turn sequencing fits `>>` well, but hands are lists (LANG-22), N players is structural multiplicity (LANG-23), rotating or reversing turn order needs dispatch (LANG-25), and identical players means duplicating a mechanism rather than abstracting it. Strip the cards and a betting round works today |
 | Performance numbers are prototype-only | Development notes say re-measure on the real build. The 1,000-job sweep (25.4 s → 0.35 s) is nearest the 60× figure |
 
 ## Defaults
