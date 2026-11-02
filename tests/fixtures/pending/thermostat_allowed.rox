@@ -1,5 +1,5 @@
 -- fixture: thermostat_allowed
--- role: negative (admissibility), M4 acceptance test
+-- role: negative (admissibility), Wave 2 acceptance test
 -- status: pending: `allowed` and its error
 -- oracle: the README's thermostat with `allowed: heat in 0..5`.
 --         k = 0.5: first heat is 5 (the boundary is legal) and the run finishes; rows equal

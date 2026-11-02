@@ -49,11 +49,11 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-11 | `and` / `or` / `not` | designed | — | §2.3 | — |
 | LANG-12 | `if / then / else` as an expression | designed | — | §2.3 | **Gates 9 of 20 pending fixtures.** Highest-value unbuilt feature |
 | LANG-13 | Built-in calls (`sign`, `abs`, `min`, `max`, `sqrt`) | designed | — | §2.3 | Full math set unresolved — see LANG-26 |
-| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Mechanism **pass-through** — *every field I did not mention is unchanged* — which satisfies D2's completeness requirement. Distinct from §2.3's `with`, which is an *expression* building a modified copy of a record; [D22](#d22-path-assignment-is-shorthand-for-with) keeps both because they do different jobs |
+| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Mechanism **pass-through** — *every field I did not mention is unchanged* — which satisfies D2's completeness requirement. **The same `..` operator is §2.3's record update**: a mechanism body is a record literal, `{ gold: …, ..s }`, so one concept covers both positions. [D22](#d22-path-assignment-is-shorthand-for-record-update) |
 | LANG-15 | `step` readable in `input:` / `allowed:` | designed | — | §5 | — |
 | LANG-16 | Named, swappable `input map` | designed | — | §3 | — |
-| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | **Already settled in §3; the flat-scalar limit is a build stage, not a design principle.** Composite types are Tier 1 in the type-cost table (Part 3) — SMT handles records natively as algebraic datatypes, so records-of-records cost essentially nothing in provability and come nowhere near LANG-31's line. The author's motivation is structural honesty rather than capability: a flat `World { pool_x, pool_y, trader_gold, trader_potions }` **asserts that four things have equal standing when they do not**, which is P3's per-line test applied to the state declaration. **Prerequisite:** LANG-41 ([D22](#d22-path-assignment-is-shorthand-for-with)), or nesting makes mechanisms worse than flat. See also LANG-42 for the `distinct` form and LANG-34 for record equality. Choices have no payloads in v1; see LANG-25 |
-| LANG-41 | Updating part of a record | designed | [D22](#d22-path-assignment-is-shorthand-for-with) | §2.3 | **Settled: `with` is the longhand (already in §2.3), path assignment is sugar for it, grouped by root field.** Make-or-break for LANG-17: With `state World { pool: Pool, trader: Trader }` and [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), changing one leaf means rebuilding the whole subtree — `pool: Pool { x: s.pool.x + 1, y: s.pool.y }`. Fine for two fields, miserable for ten, so nesting without this is a regression. **Also settles D2 at depth:** if "every field" means every *top-level* field, a ten-field subtree passes through as `pool: s.pool` — one line that states something meaningful (*the pool is unchanged*) where flat needs ten lines of bookkeeping. Nesting and D2 pull in the same direction |
+| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | **Already settled in §3; the flat-scalar limit is a build stage, not a design principle.** Composite types are Tier 1 in the type-cost table (Part 3) — SMT handles records natively as algebraic datatypes, so records-of-records cost essentially nothing in provability and come nowhere near LANG-31's line. The author's motivation is structural honesty rather than capability: a flat `World { pool_x, pool_y, trader_gold, trader_potions }` **asserts that four things have equal standing when they do not**, which is P3's per-line test applied to the state declaration. **Prerequisite:** LANG-41 ([D22](#d22-path-assignment-is-shorthand-for-record-update)), or nesting makes mechanisms worse than flat. See also LANG-42 for the `distinct` form and LANG-34 for record equality. Choices have no payloads in v1; see LANG-25 |
+| LANG-41 | Updating part of a record | designed | [D22](#d22-path-assignment-is-shorthand-for-record-update) | §2.3 | **Settled: `{ ..r, f: v }` is the longhand, path assignment is sugar for it, grouped by root field.** Make-or-break for LANG-17: With `state World { pool: Pool, trader: Trader }` and [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), changing one leaf means rebuilding the whole subtree — `pool: Pool { x: s.pool.x + 1, y: s.pool.y }`. Fine for two fields, miserable for ten, so nesting without this is a regression. **Also settles D2 at depth:** if "every field" means every *top-level* field, a ten-field subtree passes through as `pool: s.pool` — one line that states something meaningful (*the pool is unchanged*) where flat needs ten lines of bookkeeping. Nesting and D2 pull in the same direction |
 | LANG-18 | `data` — replayed CSV series | designed | — | §3 | Supplies inputs that **were** observed; CHK-12 derives inputs that were **not**. The two cover the paper's two data situations and should be documented as a pair. Running past end of data is an error; `for N steps` from data length unresolved — see RUN-05 |
 | LANG-19 | `until` stopping predicate | designed | [D10](#d10-order-of-checks-in-a-run) | §6 | — |
 | LANG-20 | `invariant` | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged), [D10](#d10-order-of-checks-in-a-run) | §6 | **Cite paper §4.4** — property `P` along a trajectory. Stop saying it is outside the formalism |
@@ -64,7 +64,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-25 | Sum types with payloads + `match` | open | — | — | cadCAD models pass strings and `'N/A'` padding for action dispatch; this is the typed replacement |
 | LANG-26 | Float↔int conversions, integer sqrt, non-integer powers | open | — | §11 | Which math functions ship in v1 |
 | LANG-27 | Bounded iteration | open | — | — | A line-search `while` loop appears in a cadCAD control model |
-| LANG-28 | Output map `y = C(x, d)` | deferred | [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) | — | **Deferred by D21 until a formalization is published or Roxin's own work needs it.** The paper contains the object unnamed: §4.4's property `P(x_i)` returns a vector per footnote 6, which is an output map without a symbol, and §4.4 introduces it because observing the underlying states may be impossible — the control-theoretic observability problem in words. §5 names both things built on it, agents' "observations of each other" and "state-feedback mechanisms", and formalizes neither. **Prerequisite for subsystem composition (M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
+| LANG-28 | Output map `y = C(x, d)` | deferred | [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) | — | **Deferred by D21 until a formalization is published or Roxin's own work needs it.** The paper contains the object unnamed: §4.4's property `P(x_i)` returns a vector per footnote 6, which is an output map without a symbol, and §4.4 introduces it because observing the underlying states may be impossible — the control-theoretic observability problem in words. §5 names both things built on it, agents' "observations of each other" and "state-feedback mechanisms", and formalizes neither. **Prerequisite for subsystem composition (the retired M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
 | LANG-29 | Mark input fields `decision` vs `disturbance` | deferred | — | — | Part I Def 2.4 deliberately unifies them, so this is an extension, not a fix. Needed only if controllability (∃ input) is ever asked alongside safety (∀ input) |
 | LANG-35 | Continuous time / ODE | rejected | — | — | Out of scope. Note Def 2.6 itself calls `f` a discrete transition |
 | LANG-30 | Non-Markovian state history | rejected | — | — | cadCAD passes `StateHistory` everywhere; this violates Def 2.9 `h : X → X`. History goes in state explicitly |
@@ -87,7 +87,6 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | SYN-01 | `^` is right-associative, binds tighter than unary minus | accidental | **needs D-number** | **missing from §2.3** | Implemented (`Caret` bp 31/30 vs `PREFIX_BP` 25) and pinned by `precedence.rox`, but the operator list does not mention `^` at all |
 | SYN-02 | Six of nine `LexError` messages paired with the wrong variant | defect | — | — | A 4-cycle plus a swap. `BadIndent`, `IndentTooDeep`, `TabInIndent` are correct. No fixture catches it (severity high) |
 | SYN-03 | Nine unreachable `TokenKind` variants | defect | — | — | `Bool`, `Decimal`, `Float`, `Int`, `Let`, `Match`, `String`, `Substep`, `Text`. `dead_code` exempts `pub` items so the compiler stays silent (severity low) |
-| SYN-04 | `with` drift | defect | — | — | §2.3 shows `s with { … }`; D13 says there is no `with`. Both editor grammars follow §2.3 (severity low) |
 | SYN-05 | `5--3` silently becomes `5` | defect | — | — | Comment swallows the subtraction. No fixture, no decision record (severity low) |
 | SYN-06 | Indentation layout — four spaces, tabs rejected, brackets suspend | runs | D12 | §2 | `layout.rs` still carries `// TODO: Maybe allow 2/4 space indents both?` |
 | SYN-07 | Lexical conventions — number underscores, four string escapes, ASCII identifiers, `--` comments | runs | D13 | §2 | No hex or binary literals yet |
@@ -97,7 +96,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 
 | ID | Item | Status | Decided | Spec | Open questions |
 |---|---|---|---|---|---|
-| ADM-01 | `allowed:` checked at run time | designed | — | §8 | M4 acceptance test is `thermostat_allowed.rox` |
+| ADM-01 | `allowed:` checked at run time | designed | — | §8 | Wave 2 acceptance test is `thermostat_allowed.rox` |
 | ADM-02 | `allowed` keeps **clause structure** in the AST | designed | [D14](#d14-allowed-keeps-clause-structure) | §8 | Settled in discussion: a single `Option<Expr>` simulates fine but discards the structure enumeration needs. AST currently has `allowed: Option<Expr>` and the parser never fills it — **fix before writing the parser** |
 | ADM-03 | Membership clauses narrow-only; conditionals go **inside** bounds | designed | [D15](#d15-membership-clauses-narrow-only-conditionals-go-inside-bounds) | §8 | Settled in discussion: `heat in 0..(if s.emergency then 1000 else 5)`, not `s.emergency or (heat in 0..5)`. Guarantees enumerability by construction. Cost: "no restriction" must be written as a wide-but-finite bound |
 | ADM-04 | State-dependent bounds | designed | — | §8 | Not an extension — Def 2.5 **is** `U : X → ℘(U)`. A fixed literal range is the degenerate case |
@@ -162,7 +161,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-14 | Parallel jobs, result store, checkpoint/resume | designed | — | §11 | Jobs are independent, so results must not change |
 | RUN-15 | `record substeps` | designed | — | §5 | Syntax provisional |
 | RUN-16 | `keep running` per invariant | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged) | §11 | Syntax provisional |
-| RUN-17 | Bytecode VM | deferred | — | — | Tree-walker stays as oracle. **Roadmap currently has this at M3; it belongs much later** |
+| RUN-17 | Bytecode VM | deferred | — | — | Tree-walker stays as oracle. The retired roadmap had this at M3; the build order omits it deliberately and nothing in the current design needs it |
 | RUN-18 | Policy-output merging | rejected | [D3](#d3-input-fields-are-independent) | — | cadCAD folds parallel policy outputs with `policy_ops=[lambda a,b: a+b]`. `U_x` is a set and `g` selects one `u`; merging has no formal counterpart |
 | RUN-19 | Substeps as first-class semantics | rejected | — | — | Bookkeeping the paper has no concept of; recording stays opt-in (RUN-15) |
 | RUN-20 | `print_job` lost a space | defect | — | — | `"job {} {}"` vs the two-space format every golden was generated from. Accounts for all 30 fixture mismatches and all 3 `verify_docs.py` failures (severity medium) |
@@ -195,7 +194,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | TOOL-14 | crates.io Trusted Publishing | open | — | — | OIDC via `rust-lang/crates-io-auth-action`; no stored token |
 | TOOL-15 | Scoop, AUR, WinGet, nixpkgs | deferred | — | — | **Rule: do not add a channel until its update is automated.** A stale manifest is worse than none |
 | TOOL-16 | `cargo xtask gen` for editor grammars | open | — | — | Promote `keyword()` to a `pub const KEYWORDS` table; generate tmLanguage + Emacs `rx` + completions + man page; `--check` in CI. Would have prevented SYN-04 |
-| TOOL-17 | Tree-sitter grammar | deferred | — | — | Unifies all editors + GitHub highlighting, but duplicates the parser against moving syntax. Revisit ~M8 |
+| TOOL-17 | Tree-sitter grammar | deferred | — | — | Unifies all editors + GitHub highlighting, but duplicates the parser against moving syntax. Revisit once the surface syntax stops moving — realistically after build-order Wave 5 |
 | TOOL-18 | Stability table (what is / is not semver-protected) | open | — | — | Must declare pretty output and error wording **unstable**, or RUN-20 becomes a breaking change forever |
 | TOOL-19 | Two-axis versioning (implementation vs language level) | open | — | — | A change that alters what existing source *means* is the only kind that can cost someone a wrong result |
 | TOOL-20 | REPL | defect | — | §11 | Reads one line and parses it as a whole module, so no indented declaration can ever be typed. D16 gives the fix: load the model once, then accept experiment statements against it |
@@ -279,7 +278,7 @@ mechanism:
 
 **Costs.** A coupled rule such as "buy and sell cannot both be nonzero" needs a predicate on top of the per-field sets.
 
-**Revisit if.** Composition of subsystems (milestone M9) needs inputs that depend on each other across subsystems.
+**Revisit if.** Composition of subsystems (LANG-28) needs inputs that depend on each other across subsystems.
 
 ---
 
@@ -593,8 +592,10 @@ There is **no `with`** — record update is `{ ..s, f: v }`. Clause words such a
 reserved. `--` comments only. No hex or binary literals yet.
 
 **Open.**
-- `core-semantics.md` §2.3 still shows `s with { … }`, contradicting this entry, and both editor grammars
-  follow §2.3. One of them is wrong — registry SYN-04.
+- ~~`core-semantics.md` §2.3 still shows `s with { … }`, contradicting this entry~~ — **resolved 2 Nov 2026 in
+  favour of this entry.** §2.3's grammar now reads `{ ..expr, field: expr, … }`, `with` is removed from both
+  editor grammars, and [D22](#d22-path-assignment-is-shorthand-for-record-update) adds path assignment as sugar
+  for it. `with` never existed in `src/`. Registry row SYN-04 retired.
 - `5--3` silently lexes as `5` followed by a comment. Deliberate or not, it is unrecorded — registry SYN-05.
 
 ---
@@ -919,37 +920,46 @@ each other, which is the symptom the one-state-space prescription would be faili
 
 ---
 
-## D22. Path assignment is shorthand for `with`
+## D22. Path assignment is shorthand for record update
 
-*Recorded 2 Nov 2026. Supersedes the first draft of this record, which invented a `{ ..s.pool, x: … }` spread
-form in ignorance of the `with` expression already designed in §2.3. There is one record-update syntax and it is
-`with`.*
+*Recorded 2 Nov 2026. Drafted first with spread, briefly rewritten to a `with` expression on seeing §2.3's
+grammar, then returned to spread once that was found to contradict [D13](#d13-lexical-conventions) — which had
+already settled that there is no `with` and that record update is `{ ..s, f: v }`. The round trip resolved
+SYN-04 in D13's favour. `with` is removed from §2.3 and from both editor grammars; nothing in `src/` ever
+referenced it.*
 
 **Decision.** A mechanism may update part of a record two ways, and the second is **defined as** the first:
 
 ```
-pool: s.pool with { x: s.pool.x + 1 }     -- longhand, the §2.3 record-update expression
+pool: { ..s.pool, x: s.pool.x + 1 }       -- longhand, the record-update expression
 pool.x: s.pool.x + 1                      -- shorthand for exactly that
 ```
 
 **The desugaring groups by root field.** Collect every path assignment in a mechanism, group them by their root,
-and merge each group into one `with`. Two paths **conflict when one is a prefix of the other**, equality
+and merge each group into one record update. Two paths **conflict when one is a prefix of the other**, equality
 included.
 
 ```
-pool.x: a    +  pool.y: b     ->  pool: s.pool with { x: a, y: b }                        ok
-pool.a.b: 1  +  pool.a.c: 2   ->  pool: s.pool with { a: s.pool.a with { b: 1, c: 2 } }    ok
+pool.x: a    +  pool.y: b     ->  pool: { ..s.pool, x: a, y: b }                          ok
+pool.a.b: 1  +  pool.a.c: 2   ->  pool: { ..s.pool, a: { ..s.pool.a, b: 1, c: 2 } }        ok
 pool: P      +  pool.x: a     ->  conflict: `pool` is a prefix of `pool.x`                 error
 pool.a: X    +  pool.a.b: 1   ->  conflict                                                 error
 ```
 
 After desugaring, [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) applies
 **completely unchanged** — every top-level field set exactly once. No new rule, no new error class. The checker,
-the explorer and any prover see only the `with` form.
+the explorer and any prover see only the record-update form.
 
-**Not to be confused with `..s`.** LANG-14's `..s` is mechanism *pass-through* — "every field I did not mention
-is unchanged" — which is about satisfying D2's completeness requirement. `with` is an *expression* that builds a
-modified copy of a record. Different jobs; both stay.
+**One concept, not two — and this is why spread beat a keyword.** LANG-14's `..s` and this record-update form
+are the *same operator in two positions*. A mechanism body **is** a record literal:
+
+```
+    mechanism:                     is exactly     { gold: s.gold - 30, ..s }
+        gold: s.gold - 30
+        ..s
+```
+
+One indented, one braced, same construct. The language gains no new idea, and `..` already lexes as `DotDot`.
 
 **Why this does not violate "exactly one way to say each thing".** It is not a second way to say a thing — it is
 one thing with an abbreviation, and `modeling.md` ch.4 states the test it passes: *where Roxin offers a
@@ -957,8 +967,13 @@ convenience, the convenience is defined as shorthand for something you could hav
 an exception to a rule you were taught.*
 
 **Alternatives considered.**
-- *`with` only.* Fine at one level, awful at three — `a: s.a with { b: s.a.b with { c: s.a.b.c with { d: 1 } } }`
+- *Record update only, no path sugar.* Fine at one level, awful at three — `a: { ..s.a, b: { ..s.a.b, c: { ..s.a.b.c, d: 1 } } }`
   against `a.b.c.d: 1`. Rejected because it makes deep records unusable and so quietly discourages LANG-17.
+- *A `with` keyword instead of spread* (§2.3's form, and both editor grammars). Reads as English, which carries
+  weight under P4. Rejected because it creates **two spellings for "everything else stays"** — `..s` in a
+  mechanism, `with` in an expression — which P3 forbids; because it reserves a very common English word against
+  D13's deliberate policy that clause words are not reserved; and because spread adds no construct where `with`
+  adds one. SYN-04 closed in D13's favour.
 - *Path only.* Reads best, but breaks D2: is setting `pool.x` and `pool.y` the same as setting `pool`, and what
   happens when both `pool:` and `pool.x:` appear? A new check and a new error class, where sugar needs neither.
 - *Both as independent primitives.* Two genuine ways to say one thing, which P3 forbids. The sugar relationship

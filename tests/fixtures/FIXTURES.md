@@ -104,7 +104,7 @@ regenerate the `.expected` file on purpose (review the diff).
 | `random_walk.rox` | golden (RNG, D7) | `uniform`, `runs`, `seed`, if/then/else | exact | yes |
 | `repeated_dosing.rox` | golden | if/then/else, ==, %, `step` | float tolerance 1e-9 relative | yes |
 | `sir_invariant.rox` | conservation | `invariant`, `within`, `metric` | float tolerance 1e-9 relative | yes |
-| `thermostat_allowed.rox` | negative (admissibility), M4 acceptance test | `allowed` and its error | rows exact; error text provisional | yes |
+| `thermostat_allowed.rox` | negative (admissibility), Wave 2 acceptance test | `allowed` and its error | rows exact; error text provisional | yes |
 | `token_vesting.rox` | conservation | `step`, `invariant`, int `//`, `==` | exact | yes |
 | `until_already_true.rox` | golden (D10) | `until`, `>=` | exact | yes |
 
@@ -112,7 +112,7 @@ regenerate the `.expected` file on purpose (review the diff).
 
 1. Part 4e (`if/then/else`, comparisons, `and`/`or`, calls, `step`): unlocks `marbles`, `collatz` (with `until`),
    `cooldowns`, `idle_clicker`, `repeated_dosing`, `bang_bang`.
-2. `allowed` and its error: `thermostat_allowed` (your M4 acceptance test), `combat_allowed`.
+2. `allowed` and its error: `thermostat_allowed` (your Wave 2 acceptance test), `combat_allowed`.
 3. `invariant` / `until` / `metric`: `invariant_violation`, `until_already_true`, `invariant_beats_until`,
    `token_vesting`, `sir_invariant`, `bonding_curve`, `amm_*`.
 4. RNG: `random_walk` (bit-exact), then the three statistical models.

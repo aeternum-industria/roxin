@@ -93,7 +93,7 @@
         },
         {
           "name": "keyword.control.roxin",
-          "match": "\\b(?:if|then|else|with|within|in)\\b"
+          "match": "\\b(?:if|then|else|within|in)\\b"
         },
         {
           "name": "keyword.operator.logical.roxin",
@@ -134,7 +134,7 @@
     },
     "state-and-input": {
       "name": "variable.language.roxin",
-      "match": "\\b[su]\\b(?=\\.[A-Za-z_]|\\s+with\\b)"
+      "match": "\\b[su]\\b(?=\\.[A-Za-z_])"
     },
     "properties": {
       "name": "variable.other.property.roxin",

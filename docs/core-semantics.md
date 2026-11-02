@@ -79,7 +79,7 @@ expr  ::= literal | name | expr.field
         | expr op expr | op expr
         | if expr then expr else expr
         | { field: expr, ... }            -- record construction
-        | s with { field: expr, ... }     -- record update (copy, then replace)
+        | { ..expr, field: expr, ... }    -- record update (copy, then replace)
         | name(expr, ...)                 -- built-in call
 ```
 
@@ -270,7 +270,7 @@ We will go through these one at a time. Each has my proposal.
 
 **Verification note (D1).** Unbounded integers map directly onto the integer theory of SMT solvers, so proofs about a model never need bit-vector reasoning about wraparound. Overflow is a stated property (`invariant NoOverflow(s) = s.balance < 2^256`) instead of hidden operator behavior. A model of a contract that wraps or reverts at a fixed width is an abstraction unless that bound is stated, so the guides must say so.
 
-## 13. Illustrative Rust types (starting point for M1)
+## 13. Illustrative Rust types
 
 ```rust
 enum Ty { Int, Decimal(u32), Float, Bool, Record(Vec<(Name, Ty)>), Choice(Name) }
@@ -305,7 +305,7 @@ The evaluator takes a state, a step index, parameters, and a random generator, a
 
 ## 14. Test vectors
 
-Every value below was computed independently with exact rational arithmetic (and IEEE doubles where noted), not by a Roxin implementation, so they can serve as the oracle for M1–M3. Float comparisons in tests should use a relative tolerance of 1e-12 unless the value is exactly representable.
+Every value below was computed independently with exact rational arithmetic (and IEEE doubles where noted), not by a Roxin implementation, so they can serve as the oracle for any implementation. Float comparisons in tests should use a relative tolerance of 1e-12 unless the value is exactly representable.
 
 **Thermostat** (start 10, setpoint 20, 8 steps, `heat = k * (setpoint - temp)`; all values are exact binary fractions, so float arithmetic reproduces them exactly)
 

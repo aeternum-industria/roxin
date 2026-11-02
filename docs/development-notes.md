@@ -9,22 +9,115 @@ every decision record — and [`core-semantics.md`](core-semantics.md) (precise 
 
 ---
 
-## Roadmap
+## Build order
 
-| Milestone | Build | Done when |
-|---|---|---|
-| M0 | Read through `docs/core-semantics.md` (its decisions D1–D13 are settled); settle the questions in Open Questions at the end; collect 3–5 real models from GDS practitioners | the draft has been reviewed and the real models are in hand |
-| M1 | Rust project, AST, and a tree-walking evaluator for one step (the oracle) | the thermostat with k = 0.5 goes `10 → 15 → 17.5 → 18.75` |
-| M2 | Trajectory loop, stop rule, output table; s-expression reader and a minimal REPL | all three k values match the closed-form values below; predator–prey holds still at equilibrium; the marbles model reaches `(5,5)`; a model can be typed into the REPL |
-| M3 | Typed IR and a bytecode compiler and VM | every M1–M2 benchmark gives identical results on the VM and the tree-walker |
-| M4 | `allowed` sets with runtime checks; seeded sampling | the thermostat with k = 1.5 and `allowed: heat in 0..5` raises an error naming the state and input; a seed repeats a run on both engines |
-| M5 | Sweeps, Monte Carlo, and A/B variants with run metadata; parallel jobs | a 3×2 sweep yields exactly 6 jobs; `Proportional` versus `BangBang` runs side by side |
-| M6 | Pre-run checker: wiring, types, mechanism purity | an impure mechanism is rejected before running |
-| M7 | Reachability, metrics, and invariant checking | the market model's reachable states all satisfy its invariant |
-| M8 | The first surface syntax | all benchmark models are written as source text |
-| M9 | Governance model; composing subsystems | the governance model runs with parameters in state |
+*Replaces the M0–M9 roadmap, 2 Nov 2026.* The old plan assumed an s-expression reader first and "the first
+surface syntax" at M8. Reality went differently: surface syntax exists, runs fourteen examples, and M8 happened
+out of order while M3's bytecode VM never started. The milestone list described an architecture that did not
+happen, which made it actively misleading. Ordering below is by **dependency**, not by date.
 
-The VM becomes the primary engine at M3. The tree-walker stays as the oracle. Backends beyond the VM are not scheduled.
+Row IDs are [`registry.md`](registry.md) Part 1. Fixture counts are headers in `../tests/fixtures/pending/`,
+used here only to say what unlocks test coverage — never as design evidence (P2).
+
+### Wave 0 — clear the ground
+
+Everything here is wrong today and all of it is small.
+
+| | Why now |
+|---|---|
+| `RUN-20` `print_job` lost a space | One character, then regenerate 29 goldens and 3 doc blocks. **Do it before more goldens accumulate** |
+| `SYN-02` six of nine `LexError` messages on the wrong variant | Wrong error text is worse than none |
+| `SYN-05` `5--3` silently lexes as `5` | Silent wrong answer |
+| `SYN-03` nine unreachable `TokenKind` variants | Includes `DotDot`, which LANG-41 will need |
+| `RUN-23` panic on closed stdout | `roxin f.rox \| head` |
+| `TOOL-21` stale `unknown_sweep_param.expected` | |
+| The five `accidental` rows | A decision session, not code: `SYN-01`, `NUM-08`, `NUM-11`, `RUN-06`, `RUN-07` |
+| **The test harness** | `tests/cli.rs` with `ROXIN_BLESS=1`. Belongs here, not later — it makes every wave below cheaper, and it is where the coverage work starts |
+
+### Wave 1 — the expression core
+
+`LANG-10` comparisons → `LANG-11` `and`/`or`/`not` → `LANG-12` `if/then/else`
+
+> **The keystone is comparisons, not `if`.** `if` without comparisons branches on nothing, and comparisons alone
+> also unlock `until`. Pending-fixture headers name `==`/`>=`/comparisons **10 times** against `if/then/else`'s 7.
+
+Riding along once comparisons land: `LANG-19 until` (5 fixtures), `NUM-06 within` (2).
+
+### Wave 2 — the two guards
+
+`ADM-02` **first** — the AST shape. D14 settled that `allowed` keeps clause structure; the AST currently holds
+`Option<Expr>` and the parser never fills it. Its own row says *fix before writing the parser*, and writing a
+parser against the wrong shape is pure rework.
+
+Then `ADM-01`/`ADM-03`, then `LANG-20 invariant` (7 fixtures).
+
+These two are what the README's pitch rests on. Until they exist, Roxin is a simulator.
+
+### Wave 3 — the checker
+
+`CHK-01`. Moves `LANG-07` and `NUM-04` from run time to check time, kills `CHK-02`, and is where `CHK-09`'s
+explorability reporting lands per D19.
+
+### Wave 4 — expressiveness
+
+`LANG-24 let`, `LANG-43 fn`. Nothing blocks on these, which is why they are easy to postpone forever — and
+everything after them involves writing real logic over real data, which is currently unwritable. A complex state
+is worthless if no interesting logic can be expressed about it.
+
+### Wave 5 — types
+
+`NUM-09` range-refined `int` **first**. It is the only type that is both exact and enumerable, and it is what
+makes `int` inputs explorable. Currently marked `deferred`, which undervalues it.
+
+Then `LANG-41` record update (D22) → `LANG-17` records → `LANG-42 distinct` and `LANG-34` equality **together**,
+since the second is hard to change later and the first decides it. Then finite-key maps, which are Tier 1 — see
+the type-cost table in registry Part 3, and note it inverts the usual order: **a map is cheaper than a list**.
+
+### Wave 6 — the explorer
+
+`RUN-25` depth-1 → `CHK-03` reachability → `CHK-04` `X_C`. Needs Wave 2's `ADM-02`/`03`/`07`, and is far more
+useful after Wave 5's `NUM-09`. `RUN-26`'s output shape must be settled before export ships — it now carries
+three constraints, from D18, D19 and D20.
+
+### Wave 7 — proofs
+
+`CHK-05` inductive invariants, `CHK-11` counterexample presentation. `CHK-12` input recovery and `CHK-14`
+P-controllability both fall out of Waves 6 and 7 rather than needing separate machinery.
+
+### Parallel tracks
+
+No dependencies on the waves; slot them wherever.
+
+- **Randomness** (§7, D7). Twelve fixture mentions across `uniform`/`runs`/`seed`, fully self-contained.
+- **`NUM-05 decimal`.** Nothing blocks it and it blocks nothing, but there is no correct type for money until it lands.
+- **`LANG-18 data`.**
+- **`TOOL-20` REPL rebuild.** Unblocked — D16 settled the model/experiment split that tells it what to load once and what to accept per line.
+- **Release Part 0.** `Cargo.toml` is missing `license`, `description`, `repository`, `rust-version`; there is no `.github/`. `dist init` requires two of those and crates.io requires another.
+
+### Two notes
+
+**Testing is not a phase.** Twenty pending fixtures already exist and each wave turns a batch live. The only
+standalone testing work is Wave 0's harness.
+
+**The bytecode VM is deliberately absent.** `RUN-17` already records it as `deferred` and says the old M3
+placement "belongs much later". The tree-walker runs everything and nothing in the current design needs a VM.
+
+### Old milestone numbers
+
+Some rows and fixture headers still cite the retired scheme.
+
+| Old | Now |
+|---|---|
+| M0, M1, M2 | done — evaluator, trajectory loop, output table |
+| M3 bytecode VM | `RUN-17`, deferred indefinitely |
+| M4 `allowed` + sampling | Wave 2, plus the randomness track |
+| M5 sweeps, Monte Carlo | sweeps done; Monte Carlo is the randomness track |
+| M6 pre-run checker | Wave 3 |
+| M7 reachability, metrics, invariants | Waves 2, 6 |
+| M8 first surface syntax | done, out of order |
+| M9 composing subsystems | `LANG-28`, deferred by D21 |
+
+---
 
 ### Benchmark models
 

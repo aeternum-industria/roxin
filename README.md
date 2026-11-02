@@ -256,7 +256,7 @@ step Heating:
         temp: s.temp + u.heat
 ```
 
-`k = 0.5` runs to the end (the first heat is exactly 5; the range includes its endpoints). `k = 1.5` stops at step 1: the first heat would be 15. This is the acceptance test for milestone M4.
+`k = 0.5` runs to the end (the first heat is exactly 5; the range includes its endpoints). `k = 1.5` stops at step 1: the first heat would be 15. This is the acceptance test for Wave 2 of the build order.
 
 ### Rules that must hold **[designed]**
 
@@ -474,15 +474,16 @@ The comparison below was written after reading every notebook and model in the p
 
 ## Where it is going
 
-| Milestone | What arrives | Done when |
+| Wave | What arrives | Done when |
 |---|---|---|
-| M1–M2 | evaluator, trajectory loop, output table **(in progress)** | the thermostat and predator–prey match their closed-form values; marbles reaches `(5,5)` |
-| M3 | typed IR, bytecode compiler and VM | every benchmark gives identical results on the VM and the tree-walker |
-| M4 | `allowed` with runtime checks; seeded sampling | thermostat with `k = 1.5` and `allowed: heat in 0..5` raises an error naming the state and input |
-| M5 | sweeps, Monte Carlo, A/B variants; parallel jobs | a 3×2 sweep yields exactly 6 jobs |
-| M6 | pre-run checker | an impure mechanism is rejected before running |
-| M7 | reachability, metrics, invariant checking | the market model's reachable states all satisfy its invariant |
-| M8–M9 | surface-syntax polish; governance model; composing subsystems | the governance model runs with parameters in state |
+| 0 | clear the known defects; the `tests/cli.rs` harness | `cargo test` runs the fixture corpus and blesses goldens |
+| 1 | comparisons, `and`/`or`/`not`, `if/then/else`, `until` | the bang-bang thermostat holds its band; `until` stops a run |
+| 2 | `allowed` and `invariant` | thermostat with `k = 1.5` and `allowed: heat in 0..5` raises an error naming the state and input; SIR's conservation law is checked every step |
+| 3 | pre-run checker | an impure mechanism is rejected before running |
+| 4 | `let`, user-defined `fn` | a non-trivial policy reads as one expression instead of five copies |
+| 5 | range-refined `int`, records, record update, `distinct` | a nested `state` declares a pool and a trader as separate things |
+| 6 | the explorer, reachability, configuration space | the market model's reachable states all satisfy its invariant |
+| 7 | inductive invariant proofs, counterexamples | a failed proof hands back a runnable one-step model |
 
 The detailed plan, the benchmark models, the risks, and the list of known gaps are in [`docs/development-notes.md`](docs/development-notes.md).
 

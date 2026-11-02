@@ -69,7 +69,7 @@
           (or "state" "type" "system" "invariant" "metric" "param" "data"
               "tolerance" "extern"
               "run" "from" "for" "steps" "sweep" "until" "every"
-              "if" "then" "else" "with" "within" "in"
+              "if" "then" "else" "within" "in"
               "and" "or" "not")
           symbol-end)
      . font-lock-keyword-face)
@@ -94,8 +94,6 @@
    ;; `s' and `u' (old state and input record), and the spread `..s'.
    `(,(rx ".." (group "s") symbol-end) (1 font-lock-variable-name-face))
    `(,(rx symbol-start (group (any "su")) "." (any alpha ?_))
-     (1 font-lock-variable-name-face))
-   `(,(rx symbol-start (group "s") (+ space) "with" symbol-end)
      (1 font-lock-variable-name-face))
 
    ;; Field access: s.temp, u.heat, record.field
