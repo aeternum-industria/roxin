@@ -12,12 +12,12 @@ every decision record — and [`core-semantics.md`](core-semantics.md) (precise 
 ## Build order
 
 *Replaces the M0–M9 roadmap, 2 Nov 2026.* The old plan assumed an s-expression reader first and "the first
-surface syntax" at M8. Reality went differently: surface syntax exists, runs fourteen examples, and M8 happened
+surface syntax" at M8. Reality went differently: surface syntax exists, runs twelve examples, and M8 happened
 out of order while M3's bytecode VM never started. The milestone list described an architecture that did not
 happen, which made it actively misleading. Ordering below is by **dependency**, not by date.
 
-Row IDs are [`registry.md`](registry.md) Part 1. Fixture counts are headers in `../tests/fixtures/pending/`,
-used here only to say what unlocks test coverage — never as design evidence (P2).
+Row IDs are [`registry.md`](registry.md) Part 1. Ordering is by what a feature *needs* in order to work — never
+by how often something used it (P2).
 
 ### Wave 0 — clear the ground
 
@@ -38,10 +38,11 @@ Everything here is wrong today and all of it is small.
 
 `LANG-10` comparisons → `LANG-11` `and`/`or`/`not` → `LANG-12` `if/then/else`
 
-> **The keystone is comparisons, not `if`.** `if` without comparisons branches on nothing, and comparisons alone
-> also unlock `until`. Pending-fixture headers name `==`/`>=`/comparisons **10 times** against `if/then/else`'s 7.
+> **The keystone is comparisons, not `if`.** `if` without comparisons branches on nothing. Every guard the
+> language is reaching for — `if/then/else`, `until`, `invariant`, `allowed` — consumes a boolean, and
+> comparisons are the only thing that produces one. That is a dependency, not a popularity contest.
 
-Riding along once comparisons land: `LANG-19 until` (5 fixtures), `NUM-06 within` (2).
+Riding along once comparisons land: `LANG-19 until` and `NUM-06 within`, which need only a predicate apiece.
 
 ### Wave 2 — the two guards
 
@@ -49,7 +50,7 @@ Riding along once comparisons land: `LANG-19 until` (5 fixtures), `NUM-06 within
 `Option<Expr>` and the parser never fills it. Its own row says *fix before writing the parser*, and writing a
 parser against the wrong shape is pure rework.
 
-Then `ADM-01`/`ADM-03`, then `LANG-20 invariant` (7 fixtures).
+Then `ADM-01`/`ADM-03`, then `LANG-20 invariant`.
 
 These two are what the README's pitch rests on. Until they exist, Roxin is a simulator.
 
@@ -88,7 +89,7 @@ P-controllability both fall out of Waves 6 and 7 rather than needing separate ma
 
 No dependencies on the waves; slot them wherever.
 
-- **Randomness** (§7, D7). Twelve fixture mentions across `uniform`/`runs`/`seed`, fully self-contained.
+- **Randomness** (§7, D7). `uniform`/`runs`/`seed` depend on nothing else and nothing else depends on them.
 - **`NUM-05 decimal`.** Nothing blocks it and it blocks nothing, but there is no correct type for money until it lands.
 - **`LANG-18 data`.**
 - **`TOOL-20` REPL rebuild.** Unblocked — D16 settled the model/experiment split that tells it what to load once and what to accept per line.
@@ -96,15 +97,17 @@ No dependencies on the waves; slot them wherever.
 
 ### Two notes
 
-**Testing is not a phase.** Twenty pending fixtures already exist and each wave turns a batch live. The only
-standalone testing work is Wave 0's harness.
+**Testing is not a phase.** The old corpus was deleted in full (P2). Its replacement is built deliberately, a
+batch per wave, arriving *with* the feature it exercises rather than ahead of it. The only standalone testing
+work is Wave 0's harness, which should land before the first new models so that blessing a golden is one command
+and a reviewed diff.
 
 **The bytecode VM is deliberately absent.** `RUN-17` already records it as `deferred` and says the old M3
 placement "belongs much later". The tree-walker runs everything and nothing in the current design needs a VM.
 
 ### Old milestone numbers
 
-Some rows and fixture headers still cite the retired scheme.
+Some rows still cite the retired scheme.
 
 | Old | Now |
 |---|---|
@@ -121,9 +124,11 @@ Some rows and fixture headers still cite the retired scheme.
 
 ### Benchmark models
 
-Moved. The benchmark values live in the fixture headers under `../tests/fixtures/`, which are what
-`tests/fixtures/tools/reference.py` actually checks against, and the expected outputs are the `.expected` files
-beside them. Feature status for each benchmark is in [`registry.md`](registry.md) Part 1.
+The benchmark values lived in the headers of the deleted corpus. Independently computed reference values for the
+models the specification turns on are in [`core-semantics.md`](core-semantics.md) §14; feature status for each
+benchmark is in [`registry.md`](registry.md) Part 1. The replacement corpus should carry its expected values the
+same way — **computed independently of the interpreter**, so that a golden can disagree with the build and be
+right.
 
 ## Documentation plan
 

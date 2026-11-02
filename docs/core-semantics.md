@@ -69,6 +69,13 @@ The semantics has three layers:
 - `+`, `-`, `*` on `int`: exact and unbounded **[settled, D1]**. A later range-refined integer type (section 11) can restrict values; a value outside its range is a run-time error.
 - `//` is floor division on `int`; `%` is the matching modulo (result has the sign of the divisor, so `step % 2` is 0 or 1 for positive steps). Plain `/` on two `int`s is a check-time error **[settled, D5]**.
 - `decimal(N)`: `+` and `-` on two `decimal(N)` are exact and give `decimal(N)`. `decimal(N) * int` is exact and gives `decimal(N)`. `decimal(N) * decimal(M)` is exact and gives `decimal(N+M)`, which must be brought back with `round` before it is stored in a `decimal(N)` field. `/` on decimals is only legal as the direct argument of `round` **[settled, D9]**.
+- `^` requires the **exponent to be an `int`** **[settled, D23]**. The base may be any numeric type. `int ^ int`
+  is exact repeated multiplication and the exponent must be non-negative, since there is no integer answer
+  otherwise — a negative one is an arithmetic error. `float ^ int` accepts a negative exponent and gives the
+  reciprocal. `decimal(N) ^ int` is repeated multiplication and grows precision as D9 describes. `0 ^ 0` is `1`.
+  A **non-integer exponent is a check-time error** naming `pow`.
+- `pow(x, y)` on two `float`s is the non-integer power, `exp(y * ln x)` **[settled, D23]**. It is approximate,
+  and unlike `^` it is outside the arithmetic a solver decides — see D23 for why that boundary is in the syntax.
 - `round(e, mode)` converts to the *expected* decimal type, rounding with `down`, `up`, or `nearest` (ties to even). The mode is mandatory **[settled]**.
 - `float`: ordinary IEEE binary64 arithmetic. A result that is NaN or infinite is an arithmetic error that stops the job **[settled, D4]**. Division by zero (any type) is an arithmetic error.
 
@@ -83,9 +90,9 @@ expr  ::= literal | name | expr.field
         | name(expr, ...)                 -- built-in call
 ```
 
-Operators, loosest to tightest: `or`; `and`; `not`; comparisons (`== != < <= > >=`, with optional `within`); `+ -`; `* // %`; unary `-`; field access. Evaluation is strict and left to right. `if` evaluates only the taken branch. `and` and `or` short-circuit.
+Operators, loosest to tightest: `or`; `and`; `not`; comparisons (`== != < <= > >=`, with optional `within`); `+ -`; `* // %`; unary `-`; `^` (**right-associative**, so `2^3^2` is `2^9`, and tighter than unary minus, so `-2^2` is `-4`) **[settled, D23]**; field access. Evaluation is strict and left to right. `if` evaluates only the taken branch. `and` and `or` short-circuit.
 
-Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `to_float`, `sample` distributions (section 7). Every built-in has an effect label (`pure` or `random`) in the one function registry **[settled]**. `random` functions may appear **only** in `input:` expressions.
+Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `pow` (float, D23), `to_float`, `sample` distributions (section 7). Every built-in has an effect label (`pure` or `random`) in the one function registry **[settled]**. `random` functions may appear **only** in `input:` expressions.
 
 ## 3. Declarations
 
@@ -110,7 +117,7 @@ These forms fall into two categories (D16). **Model** forms — `param`, `tolera
 forms — `run` and its clauses — define a question asked *of* it. The engine loads the model once and applies
 experiment forms to it; a file carrying no experiment form is valid and does nothing.
 
-Name resolution is by declaration, in any order. Names are unique within their kind. Circular type aliases are errors.
+Name resolution is by declaration, in any order — including `param` defaults, which may reference any other param regardless of where it is declared **[settled; the build currently resolves in declaration order, registry NUM-11]**. Names are unique within their kind. Circular type aliases are errors, and so are circular `param` defaults.
 
 ## 4. One step
 
@@ -157,12 +164,15 @@ for k in 1..=N:
 ```
 
 - `for N steps` applies the system exactly N times, so a finished run has N+1 rows **[settled]**.
+- `N` may be any int-valued expression, including a param, and is evaluated per job after overrides **[settled, D24]**. Sweeping it sweeps the horizon, so jobs in one run may differ in row count.
 - `until` is a predicate on the state. If it holds, the job ends normally; the rows end at that state.
 - **Failure.** Any error ends that job and records why. Other jobs in the sweep continue **[settled]**. For an invariant violation, the violating state **is** recorded as the job's final row, flagged, so the failure can be inspected **[settled, D8]**. For an admissibility, arithmetic, or data error, no new state exists, so the last row is the previous one and the error record carries the offending state and input. `keep running` (opt-in, per invariant) records the violation and continues **[settled]**.
 
 ### 6.1 Sweeps and jobs
 
-A `sweep p in [v1, v2, ...]` clause overrides parameter `p`. Several sweep clauses form the **Cartesian product** (the spec's definition). A run with `runs M` repeats each configuration M times with different random streams. Jobs are numbered in row-major order: sweep clauses in the order written, first clause slowest, Monte Carlo run fastest. Jobs are independent, so they may run in parallel without changing results.
+A `sweep p in [v1, v2, ...]` clause overrides parameter `p`, and every param whose default depends on `p`, transitively, is re-evaluated with the override in place **[settled, D24]**. A param is therefore constant within a job, not across a run.
+
+Sweep value lists are expressions, evaluated once in the default-param environment before any job exists, since the lists determine the job set. A list may reference any param that is not itself swept; referencing a swept param is a check-time error **[settled, D25]**. The console job line lists the overridden params and their dependents; the results table carries every declared param (§6.2). Several sweep clauses form the **Cartesian product** (the spec's definition). A run with `runs M` repeats each configuration M times with different random streams. Jobs are numbered in row-major order: sweep clauses in the order written, first clause slowest, Monte Carlo run fastest. Jobs are independent, so they may run in parallel without changing results.
 
 ### 6.2 Results
 

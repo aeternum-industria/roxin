@@ -86,7 +86,7 @@ the one-member job:
 
 <!-- output: commons.rox -->
 ```
-job 0  members = 1
+job 0 members = 1
     0  { stock: 500, caught: 0 }
     1  { stock: 525, caught: 25 }
     2  { stock: 548.625, caught: 51.25 }

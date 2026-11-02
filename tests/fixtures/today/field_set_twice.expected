@@ -1,3 +1,0 @@
-job 0  
-    0  { temp: 10 }
-  stopped at step 1: field `temp` is set twice

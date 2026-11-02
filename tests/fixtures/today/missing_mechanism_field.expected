@@ -1,3 +1,0 @@
-job 0  
-    0  { temp: 10, humidity: 40 }
-  stopped at step 1: the mechanism does not set field `humidity`

@@ -74,7 +74,7 @@ The input is the era's subsidy (the rule, read off the state); the mechanism add
 
 <!-- output: bitcoin-halving.rox -->
 ```
-job 0  
+job 0
     0  { era: 0, supply: 0 }
     1  { era: 1, supply: 1050000000000000 }
     2  { era: 2, supply: 1575000000000000 }

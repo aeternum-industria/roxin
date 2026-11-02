@@ -1,3 +1,0 @@
-job 0  
-    0  { n: 8 }
-  stopped at step 1: `/` is not allowed on two ints; use `//` for floor division

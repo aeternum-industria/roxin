@@ -1,3 +1,0 @@
-job 0  
-    0  { temp: 10 }
-  stopped at step 1: `pressure` is not a field of state `Room`

@@ -42,7 +42,7 @@ what lets a model written from one guide be read by someone who learned from ano
 - **[runs today]** works in the current build. Every such block is a file in [`examples/`](../../examples/), and
   the output shown is what the build prints.
 - **[designed]** specified in the project docs but not built yet. Expected outputs for these were computed
-  independently in Python (see `tools/reference.py` in the fixtures package), not by a Roxin run, and are labeled so.
+  independently in Python, not by a Roxin run, and are labeled so.
 - **[exploring]** an open question.
 
 **Neutrality.** The guides show what a rule set *does* under stated assumptions. They do not say which rules are

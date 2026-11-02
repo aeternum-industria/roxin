@@ -77,7 +77,7 @@ One run, three jobs (one per value of `k`). Each job prints its states, row 0 be
 
 <!-- output: thermostat.rox -->
 ```
-job 0  k = 0.25
+job 0 k = 0.25
     0  { temp: 10 }
     1  { temp: 12.5 }
     2  { temp: 14.375 }
@@ -335,7 +335,7 @@ Every numeric field declares `int`, `decimal`, or `float`. Literals take their t
 `//` is floor division and `%` is the matching modulo, so `a == (a // b) * b + a % b` always. `-7 // 2` is `-4` and `-7 % 3` is `2` (the result takes the sign of the divisor). Plain `/` on two ints is an error:
 
 ```
-job 0  
+job 0
     0  { n: 8 }
   stopped at step 1: `/` is not allowed on two ints; use `//` for floor division
 ```
@@ -357,14 +357,14 @@ Both values were checked with exact arithmetic. A language that rounds for you c
 
 There is no default tolerance. `==` or `!=` on floats needs `within 0.5` (absolute), `within 0.0001%` (relative), or a model-wide `tolerance`; otherwise it is a check-time error. `<`, `<=`, `>`, `>=` never need one. `a == b within p%` means `|a - b| <= p * max(|a|, |b|)`: symmetric, no division, and a nonzero number is never "equal" to 0 under a relative tolerance.
 
-*Why:* floating-point rounding quietly breaks invariant checks. In the fixtures, a constant-product pool with **no fee** and an invariant `x * y >= k0` fails at step 11 when 7 is traded each step: the product comes out `999999.9999999999`, below `k0` purely from rounding. A checker that pretends floats are exact would report a false alarm; one that hides the problem would miss real ones. Roxin makes the author choose.
+*Why:* floating-point rounding quietly breaks invariant checks. A constant-product pool with **no fee** and an invariant `x * y >= k0` fails at step 11 when 7 is traded each step: the product comes out `999999.9999999999`, below `k0` purely from rounding. A checker that pretends floats are exact would report a false alarm; one that hides the problem would miss real ones. Roxin makes the author choose.
 
 ### A bad number stops the job (D4) **[runs today]**
 
 A NaN, an infinity, or a division by zero is an error that stops *that job*, recorded with the step. There is no "propagate NaN" mode. Other jobs in a sweep continue and rows computed before the failure are kept:
 
 ```
-job 0  
+job 0
     ...rows 0 to 2 (x = 1, then 1e150, then about 1e300), kept
   stopped at step 3: arithmetic error: the result is not a finite number
 ```
@@ -376,7 +376,7 @@ job 0
 A mechanism produces the *whole* next state, and every field reads the *old* state. A mechanism that forgets a field is rejected:
 
 ```
-job 0  
+job 0
     0  { temp: 10, humidity: 40 }
   stopped at step 1: the mechanism does not set field `humidity`
 ```
@@ -428,7 +428,7 @@ The comparison below was written after reading every notebook and model in the p
 | Results | A table whose shape depends on config, and post-processing code to flatten it. | A typed results schema exported to Parquet, CSV, or SQLite. **[designed]** |
 | Units | Written in comments (`#unit: fiat/labor`). | Not addressed. Roxin has no units either. |
 
-**Same answers.** The thermostat and predator–prey models were run in cadCAD 0.5.3 as well, and the numbers match Roxin's, including the closed-form values in the model headers.
+**Same answers.** The thermostat and predator–prey models were run in cadCAD 0.5.3 as well, and the numbers match Roxin's, including the closed-form equilibrium values.
 
 **What cadCAD has that Roxin does not (yet)**
 
@@ -467,7 +467,7 @@ The comparison below was written after reading every notebook and model in the p
 - **Defaults over configuration.** The 99% case should need no configuration. A new feature is judged by how little it costs someone who does not use it: *a feature you don't use should cost you no syntax.*
 - **Boundary rule.** A default is acceptable where the common case is clear and a wrong default is visible and harmless (the seed, the progress bar). Where a wrong default could silently weaken a guarantee (number types, float tolerance), the author decides and the checker refuses to guess.
 - **Verification rule.** Every feature must state how a solver would see it, or be marked unverifiable. The language is designed so that properties can be checked or proved, not only observed. The central proof is an inductive invariant: it holds at the start, and for every state satisfying it and every legal input, the mechanism's result satisfies it again.
-- **Neutral, checkable documentation.** Claims are tied to evidence (a fixture, a decision record, a source). Comparisons say what was seen where.
+- **Neutral, checkable documentation.** Claims are tied to evidence (a worked model, a decision record, a source). Comparisons say what was seen where.
 - **Written by hand.** The implementation is written entirely by hand. AI assistance is limited to documentation, brainstorming, review, and explanation (policy P1, `docs/registry.md`).
 
 ---
@@ -476,7 +476,7 @@ The comparison below was written after reading every notebook and model in the p
 
 | Wave | What arrives | Done when |
 |---|---|---|
-| 0 | clear the known defects; the `tests/cli.rs` harness | `cargo test` runs the fixture corpus and blesses goldens |
+| 0 | clear the known defects; the `tests/cli.rs` harness | `cargo test` runs the model corpus and blesses goldens |
 | 1 | comparisons, `and`/`or`/`not`, `if/then/else`, `until` | the bang-bang thermostat holds its band; `until` stops a run |
 | 2 | `allowed` and `invariant` | thermostat with `k = 1.5` and `allowed: heat in 0..5` raises an error naming the state and input; SIR's conservation law is checked every step |
 | 3 | pre-run checker | an impure mechanism is rejected before running |

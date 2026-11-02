@@ -74,7 +74,7 @@ habit. Three jobs come out, each printing 61 rows (row 0 is the start). Rows 0, 
 
 <!-- output: game-economy.rox -->
 ```
-job 0  spend_rate = 0.02
+job 0 spend_rate = 0.02
     0  { gold: 0 }
     1  { gold: 100 }
     2  { gold: 198 }

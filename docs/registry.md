@@ -22,7 +22,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | `runs` | works in the current build, verified by running it |
 | `designed` | specified, not built; syntax may still change |
 | `open` | wanted, not yet decided |
-| `accidental` | **implemented but never decided** — behavior exists and is observable; needs ratification or correction |
+| `accidental` | **implemented but never decided** — behavior exists and is observable; needs ratification or correction. If a settled rule in `core-semantics.md` already covers it, the behaviour is a `defect` instead: `accidental` means *nobody ever decided*, not *the build disagrees* |
 | `deferred` | wanted, deliberately not now |
 | `rejected` | deliberately not doing; reason recorded |
 | `defect` | known bug |
@@ -39,7 +39,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-01 | `param` with typed default | runs | — | §3 | See NUM-08, NUM-09 for evaluation-order issues |
 | LANG-02 | `state` record declaration | runs | — | §3 | Only `int`/`float`/`bool` work at runtime; `decimal` and named types error |
 | LANG-03 | `step` with `input:` / `mechanism:` | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), [D3](#d3-input-fields-are-independent) | §4 | — |
-| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard. **Endorsed by [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization):** Part I §5 prescribes one state space, so endomorphic composition is the paper's own recommendation, not a limitation Roxin settled for. **Zero usage: 0 of 66 `system` declarations in the corpus use `>>`** — D2 removed its main motivation, since one mechanism writes the whole state where cadCAD needed a chain of blocks. It earns its keep only where *order* matters (settle → charge → accrue; turn order). Needs a motivating fixture — see TOOL-24 |
+| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard. **Endorsed by [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization):** Part I §5 prescribes one state space, so endomorphic composition is the paper's own recommendation, not a limitation Roxin settled for. **Little used:** D2 removed its main motivation, since one mechanism writes the whole state where cadCAD needed a chain of blocks. It earns its keep only where *order* matters (settle → charge → accrue; turn order) — and no model written so far has needed that. Needs a motivating model — see TOOL-24 |
 | LANG-05 | `run … from … for N steps` | runs | — | §6 | — |
 | LANG-06 | `sweep` (Cartesian product) | runs | — | §6.1 | Zip-style sweeps unresolved — see RUN-04 |
 | LANG-07 | Mechanism must set every field exactly once | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Enforced at run time, first step only; moves to checker — see CHK-01 |
@@ -47,8 +47,8 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-09 | Field access `s.x`, `u.y` | runs | — | §2.3 | — |
 | LANG-10 | Comparisons (`== != < <= > >=`) | designed | — | §2.3 | Float `==` needs tolerance — see NUM-06 |
 | LANG-11 | `and` / `or` / `not` | designed | — | §2.3 | — |
-| LANG-12 | `if / then / else` as an expression | designed | — | §2.3 | **Gates 9 of 20 pending fixtures.** Highest-value unbuilt feature |
-| LANG-13 | Built-in calls (`sign`, `abs`, `min`, `max`, `sqrt`) | designed | — | §2.3 | Full math set unresolved — see LANG-26 |
+| LANG-12 | `if / then / else` as an expression | designed | — | §2.3 | The first useful consumer of a boolean inside a mechanism body: without it every piecewise rule must be written arithmetically. Depends on comparisons (LANG-11), which produce the boolean |
+| LANG-13 | Built-in calls (`sign`, `abs`, `min`, `max`, `sqrt`, `pow`) | designed | — | §2.3 | `pow` added by [D23](#d23--takes-an-integer-exponent-pow-takes-the-rest). Full math set unresolved — see LANG-26 |
 | LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Mechanism **pass-through** — *every field I did not mention is unchanged* — which satisfies D2's completeness requirement. **The same `..` operator is §2.3's record update**: a mechanism body is a record literal, `{ gold: …, ..s }`, so one concept covers both positions. [D22](#d22-path-assignment-is-shorthand-for-record-update) |
 | LANG-15 | `step` readable in `input:` / `allowed:` | designed | — | §5 | — |
 | LANG-16 | Named, swappable `input map` | designed | — | §3 | — |
@@ -62,7 +62,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-23 | Agent populations / graphs | open | — | — | Depends on LANG-22. Needed by every agent-based model in the cadCAD corpus |
 | LANG-24 | Local `let` bindings | open | — | — | Collected from real cadCAD models |
 | LANG-25 | Sum types with payloads + `match` | open | — | — | cadCAD models pass strings and `'N/A'` padding for action dispatch; this is the typed replacement |
-| LANG-26 | Float↔int conversions, integer sqrt, non-integer powers | open | — | §11 | Which math functions ship in v1 |
+| LANG-26 | Float↔int conversions, integer sqrt | open | — | §11 | Which math functions ship in v1. **Non-integer powers removed from this row — they already worked and are now `pow`, settled by [D23](#d23--takes-an-integer-exponent-pow-takes-the-rest).** This row was stale |
 | LANG-27 | Bounded iteration | open | — | — | A line-search `while` loop appears in a cadCAD control model |
 | LANG-28 | Output map `y = C(x, d)` | deferred | [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) | — | **Deferred by D21 until a formalization is published or Roxin's own work needs it.** The paper contains the object unnamed: §4.4's property `P(x_i)` returns a vector per footnote 6, which is an output map without a symbol, and §4.4 introduces it because observing the underlying states may be impossible — the control-theoretic observability problem in words. §5 names both things built on it, agents' "observations of each other" and "state-feedback mechanisms", and formalizes neither. **Prerequisite for subsystem composition (the retired M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
 | LANG-29 | Mark input fields `decision` vs `disturbance` | deferred | — | — | Part I Def 2.4 deliberately unifies them, so this is an extension, not a fix. Needed only if controllability (∃ input) is ever asked alongside safety (∀ input) |
@@ -84,10 +84,10 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 
 | ID | Item | Status | Decided | Spec | Open questions |
 |---|---|---|---|---|---|
-| SYN-01 | `^` is right-associative, binds tighter than unary minus | accidental | **needs D-number** | **missing from §2.3** | Implemented (`Caret` bp 31/30 vs `PREFIX_BP` 25) and pinned by `precedence.rox`, but the operator list does not mention `^` at all |
-| SYN-02 | Six of nine `LexError` messages paired with the wrong variant | defect | — | — | A 4-cycle plus a swap. `BadIndent`, `IndentTooDeep`, `TabInIndent` are correct. No fixture catches it (severity high) |
+| SYN-01 | `^` precedence, conventions, and the exponent rule | designed | [D23](#d23--takes-an-integer-exponent-pow-takes-the-rest) | §2.2, §2.3 | **Ratified by D23.** Right-associative, tighter than unary minus, `0^0 = 1`, `int ^ negative` is an arithmetic error. **Build change needed:** `^` must now reject a non-integer exponent at check time and direct the author to `pow` |
+| SYN-02 | Six of nine `LexError` messages paired with the wrong variant | defect | — | — | A 4-cycle plus a swap. `BadIndent`, `IndentTooDeep`, `TabInIndent` are correct. Nothing exercises a lex error (severity high) |
 | SYN-03 | Nine unreachable `TokenKind` variants | defect | — | — | `Bool`, `Decimal`, `Float`, `Int`, `Let`, `Match`, `String`, `Substep`, `Text`. `dead_code` exempts `pub` items so the compiler stays silent (severity low) |
-| SYN-05 | `5--3` silently becomes `5` | defect | — | — | Comment swallows the subtraction. No fixture, no decision record (severity low) |
+| SYN-05 | `5--3` silently becomes `5` | defect | — | — | Comment swallows the subtraction. No decision record (severity low) |
 | SYN-06 | Indentation layout — four spaces, tabs rejected, brackets suspend | runs | D12 | §2 | `layout.rs` still carries `// TODO: Maybe allow 2/4 space indents both?` |
 | SYN-07 | Lexical conventions — number underscores, four string escapes, ASCII identifiers, `--` comments | runs | D13 | §2 | No hex or binary literals yet |
 | SYN-08 | `step` names two different things | open | — | §5 | `step Shop:` declares a rule; `step` is also the tick index readable in `input:` and `allowed:` but **not** `mechanism:` (§5). A newcomer's first guess about what `step` means is therefore wrong in two of the three places they will try it. Surfaced by writing [`modeling.md`](modeling.md) ch.4, which works around it by never naming the keyword — a reliable tell. Rename candidates for the index: `tick` (matches D18's vocabulary), `k` (matches §5's own prose and the papers), `now`, `index`. §5 justifies the index as sugar for a counter in the state, which the guide uses as a teaching point and which a rename does not disturb |
@@ -110,14 +110,14 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | ID | Item | Status | Decided | Spec | Open questions |
 |---|---|---|---|---|---|
 | NUM-01 | No default numeric type | designed | — | §2 | Evaluator currently promotes int→float in mixed expressions; decided rule is a type error. **Divergence** |
-| NUM-02 | `int` is arbitrary precision | designed | [D1](#d1-int-is-an-arbitrary-precision-integer) | §2 | Build uses `i128`; `34!` stops the job. `factorial_overflow` fixture pins the divergence, `.expected-d1` holds the target |
+| NUM-02 | `int` is arbitrary precision | designed | [D1](#d1-int-is-an-arbitrary-precision-integer) | §2 | Build uses `i128`; `34!` stops the job. The divergence from D1 is the open part — D1 wants arbitrary precision |
 | NUM-03 | `//` floor division, `%` floored modulo | runs | [D5](#d5-integer-division-is--floor-and--floored-modulo--on-ints-is-a-type-error) | §2.2 | — |
 | NUM-04 | `/` on two ints is an error | runs | [D5](#d5-integer-division-is--floor-and--floored-modulo--on-ints-is-a-type-error) | §2.2 | Currently a run-time error; should be check-time |
 | NUM-05 | `decimal(N)` with explicit `round` | designed | [D9](#d9-decimal-multiplication-grows-precision-division-only-appears-inside-round) | §2.2 | Errors at run time today as unsupported |
 | NUM-06 | Float `==`/`!=` require a tolerance | designed | [D6](#d6-relative-tolerance-is-measured-against-the-larger-magnitude) | §2.1 | — |
 | NUM-07 | NaN / infinity / divide-by-zero stops the job | runs | [D4](#d4-nan-infinity-and-division-by-zero-stop-the-job) | §2.2 | — |
-| NUM-11 | Param defaults may reference earlier params | accidental | **needs decision** | contradicts §3 | Order-dependent: forward reference fails with `unknown name`. §3 says "name resolution is by declaration, in any order" |
-| NUM-08 | Derived params follow sweeps | accidental | **needs decision** | — | `param b = a * 10` with `sweep a in [1,3]` gives b = 10, 30. Genuinely useful, but invisible: the job header records only `a`. Should derived params become result columns? |
+| NUM-11 | Param defaults resolve in declaration order | defect | — | §3 | **Reclassified from `accidental` 2 Nov 2026: §3 already settled this, so the build contradicting it is a defect, not a semantics awaiting ratification.** Verified: `param b = a * 10` before `param a = 2` fails `unknown name `a`` at the *declaration*; reversed, it works. §3 says name resolution is by declaration **in any order**, and order-independence holds everywhere else in the language — [D22](#d22-path-assignment-is-shorthand-for-record-update) lets mechanism lines be sorted alphabetically, and `modeling.md` ch.10 spends a chapter on order carrying no meaning. **Fix:** resolve params by dependency, any declaration order, and reject cycles — which cannot currently arise, since a forward reference fails before a cycle can form. The topological sort this needs also supplies NUM-08's dependency graph |
+| NUM-08 | Derived params follow sweeps | designed | [D24](#d24-a-sweep-carries-through-to-derived-params-the-console-line-shows-both) | §6.1, §6.2 | **Ratified.** `param b = a * 10` with `sweep a in [1,3]` gives b = 10, 30. §6.2 already gave every declared param a results column, so the only open part was the console line: it now shows overrides **and their dependents**. **Build change needed:** the console job line currently lists overrides only. Depends on NUM-11's dependency graph |
 | NUM-09 | Range-refined integer types (`type U256 = int in 0..2^256-1`) | deferred | [D1](#d1-int-is-an-arbitrary-precision-integer) | §11 | Syntax and checking details |
 | NUM-10 | State metric `d_X` | open | — | — | Paper Assumption 3.2. **D6's open item — the rule for merging near-equal float states — *is* this.** Name it `d_X` when you build it. **Shape problem to settle first:** `d_X` takes **two** states, so it does not fit LANG-21's `metric Name(s: State): type` shape, which is a pure function of one. The same applies to CHK-13's per-step change. A two-state observable is a new declaration shape, not a new keyword argument. **Second and stronger motivation: CHK-12.** Matching an observed state against a computed successor needs *nearest*, not *equal*, because real data is noisy and floats do not land exactly. Merging near-equal explorer states is a convenience; fitting a model to observations is a capability, and both are the same function |
 
@@ -149,9 +149,9 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-02 | Per-job failure; other jobs continue; rows kept | runs | [D4](#d4-nan-infinity-and-division-by-zero-stop-the-job), [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged) | §6 | — |
 | RUN-03 | Job numbering, first sweep clause slowest | runs | — | §6.1 | Documented, untested |
 | RUN-04 | Zip-style sweeps | open | — | — | cadCAD zips equal-length lists and broadcasts length-1. Roxin needs an explicit choice |
-| RUN-05 | `for N steps` where N comes from data length | open | — | — | Interacts with RUN-06 |
-| RUN-06 | Step count evaluated per job, after overrides | accidental | **needs decision** | — | `for n steps` with `sweep n in [1,3]` yields 2- and 4-row jobs. Useful, undocumented |
-| RUN-07 | Sweep value lists evaluated in the default-param env | accidental | **needs decision** | — | So a sweep list may reference params. Interacts with NUM-08 and NUM-09 |
+| RUN-05 | `for N steps` where N comes from data length | open | — | — | RUN-06 settles the per-job half: `N` is already an expression. What remains is where a data series' length comes from |
+| RUN-06 | Step count evaluated per job, after overrides | designed | [D24](#d24-a-sweep-carries-through-to-derived-params-the-console-line-shows-both) | §6 | **Ratified** as a consequence of D24: `for N steps` takes a param or expression, evaluated per job, so `sweep n in [1,3]` yields a 1-step and a 3-step job. Jobs may therefore differ in row count |
+| RUN-07 | Sweep value lists evaluated in the default-param env | designed | [D25](#d25-a-sweep-list-may-reference-params-but-not-swept-ones) | §6.1 | **Ratified in part.** A list may reference an unswept param (`sweep a in [k, k*2]`). **Build change needed:** referencing a *swept* param must become a check-time error — today it silently uses that param's default |
 | RUN-08 | `runs N`, `seed`, reproducible RNG | designed | [D7](#d7-random-numbers-use-pinned-algorithms-so-runs-reproduce-exactly) | §7 | xoshiro256++, SplitMix64, Box–Muller, pinned `libm`. `random_walk.rox` pins one reading of job-seed derivation — confirm which is intended |
 | RUN-09 | Randomness legal only in `input:` | designed | [D7](#d7-random-numbers-use-pinned-algorithms-so-runs-reproduce-exactly) | §7 | **Warranted by paper Def 2.4** — stochastic influence enters as an input |
 | RUN-10 | Results schema | designed | — | §6.2 | Columns listed in §6.2. **Hardest thing to change later** — every export format and downstream analysis sees it |
@@ -164,10 +164,10 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-17 | Bytecode VM | deferred | — | — | Tree-walker stays as oracle. The retired roadmap had this at M3; the build order omits it deliberately and nothing in the current design needs it |
 | RUN-18 | Policy-output merging | rejected | [D3](#d3-input-fields-are-independent) | — | cadCAD folds parallel policy outputs with `policy_ops=[lambda a,b: a+b]`. `U_x` is a set and `g` selects one `u`; merging has no formal counterpart |
 | RUN-19 | Substeps as first-class semantics | rejected | — | — | Bookkeeping the paper has no concept of; recording stays opt-in (RUN-15) |
-| RUN-20 | `print_job` lost a space | defect | — | — | `"job {} {}"` vs the two-space format every golden was generated from. Accounts for all 30 fixture mismatches and all 3 `verify_docs.py` failures (severity medium) |
+| RUN-20 | `print_job` emits a trailing space | defect | — | — | A job with no overridden params prints `job 0 ` with nothing after the space. Trailing whitespace is a hazard for golden comparison, since git and most editors strip it. **The one-space format itself is settled**: the job line is a *header* introducing a block, not a table row, so it takes no column alignment — unlike the step rows, whose two-space gap separates a right-aligned index from the state. RUN-26 may revisit the whole output shape (severity low) |
 | RUN-21 | Self-describing results | designed | — | §6.2 | Results record the effective settings used (seed, tolerance, step counting), so a file describes how it was produced |
 | RUN-22 | Global mutable state | rejected | — | — | An experiment is a value, not an entry in a global registry |
-| RUN-23 | Panic on closed stdout | defect | — | — | `roxin f.rox \| head` panics with a broken pipe. Unpleasant in exactly the pipelines fixtures and `verify_docs.py` use (severity low) |
+| RUN-23 | Panic on closed stdout | defect | — | — | `roxin f.rox \| head` panics with a broken pipe. Unpleasant in exactly the pipelines `verify_docs.py` uses (severity low) |
 | RUN-24 | Model and experiment as separate categories | designed | D16 | §3 | Parser and interpreter collect one flat item list today. Prerequisite for the REPL (TOOL-20) and for any exploration form |
 | RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17, D18 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
 | RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships. **Now carries three settled requirements:** D18 makes a tick-level edge label a *tuple* of per-step inputs rather than a single `u`; D20 requires a node marker plus the violated invariant's name, and a terminal node distinguishable from an unexpanded one; D19 requires that any tool-supplied search bound be recorded separately from the model's own `allowed` |
@@ -178,13 +178,13 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 
 | ID | Item | Status | Decided | Spec | Open questions |
 |---|---|---|---|---|---|
-| TOOL-01 | Fixture harness in `tests/cli.rs` | open | — | — | **File is empty; `cargo test` reports 0 passed.** 52 fixtures, 47 goldens, an independent oracle and written comparison rules all exist with no runner |
+| TOOL-01 | Test harness in `tests/cli.rs` | open | — | — | **`tests/` does not exist; `cargo test` reports 0 passed.** The old corpus was deleted in full (see P2). The harness and the models it runs are now built together, deliberately, a batch per wave. Needs a bless mode (`ROXIN_BLESS=1`) so a format change is one command and a reviewed diff |
 | TOOL-02 | `ROXIN_BLESS=1` golden regeneration | open | — | — | Turns a format change from an afternoon into a reviewed `git diff` |
-| TOOL-03 | Pending fixtures fail when they start **passing** | open | — | — | Turns the corpus into a feature-completion detector |
-| TOOL-04 | Unit tests per `LexError` variant | open | — | — | Would have caught SYN-02. No `today/` fixture exercises a lex error |
+| TOOL-03 | Models for unbuilt features fail when they start **passing** | open | — | — | Turns the corpus into a feature-completion detector. The convention, not the deleted `pending/` directory, is what is worth keeping |
+| TOOL-04 | Unit tests per `LexError` variant | open | — | — | Would have caught SYN-02. Nothing exercises a lex error |
 | TOOL-05 | Property tests (D5 identity, lexer never panics) | open | — | — | `a == (a // b) * b + a % b` is a universally quantified claim; example tests only sample it |
-| TOOL-06 | `reference.py` + `verify_docs.py` in CI | open | — | — | Both work today and are run by nobody. `verify_docs.py` exits 1 correctly — usable as a gate with no wrapper |
-| TOOL-07 | `.gitattributes` with `eol=lf` | open | — | — | Before the first Windows CI run, or 29 fixtures fail on carriage returns |
+| TOOL-06 | `verify_docs.py` in CI | open | — | — | Works today and is run by nobody. Exits 1 correctly — usable as a gate with no wrapper. It is now the only automated check in the repo, which raises its value: it is what keeps the twelve `examples/` models and the documents that teach from them in agreement |
+| TOOL-07 | `.gitattributes` with `eol=lf` | open | — | — | Before the first Windows CI run, or every golden comparison fails on carriage returns |
 | TOOL-08 | License triple reconciled | open | — | — | **Blocks all packaging.** `LICENSE` is BSD-2-Clause, README says "not yet chosen", `Cargo.toml` has no `license` field |
 | TOOL-09 | `Cargo.toml` metadata | open | — | — | Missing `description`, `repository` (required by `dist init`), `rust-version`, `keywords`, `categories` |
 | TOOL-10 | MSRV policy + `rust-toolchain.toml` | open | — | — | Edition 2024 needs ≥1.85; developing on 1.99. An untested MSRV is a guess |
@@ -198,9 +198,9 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | TOOL-18 | Stability table (what is / is not semver-protected) | open | — | — | Must declare pretty output and error wording **unstable**, or RUN-20 becomes a breaking change forever |
 | TOOL-19 | Two-axis versioning (implementation vs language level) | open | — | — | A change that alters what existing source *means* is the only kind that can cost someone a wrong result |
 | TOOL-20 | REPL | defect | — | §11 | Reads one line and parses it as a whole module, so no indented declaration can ever be typed. D16 gives the fix: load the model once, then accept experiment statements against it |
-| TOOL-21 | `unknown_sweep_param.expected` is stale | defect | — | — | Build now adds line/column. The analogous path in `eval_params` still uses `Span {0,0}` (severity low) |
+| TOOL-21 | `eval_params` errors carry no position | defect | — | — | Errors elsewhere name a line and column; the path in `eval_params` still builds `Span {0,0}`, so an unknown sweep param points at nothing. Found through a stale golden that has since been deleted — the bug is in the build, not the file (severity low) |
 | TOOL-23 | Syntax for experiments and A/B variants | open | — | — | Currently a sketch. Interacts with named `input map` |
-| TOOL-24 | Integration models in the fixture corpus | open | — | — | The 52 fixtures are unit-level — goldens, error cases, stress — and nothing exercises several features at once, which is where flaws *between* features surface. `pending/` is the right home but all 20 are one-feature-ahead and simple. Cheapest first multi-step fixture: a **betting round** (P1 bets, P2 reacts, P3 reacts) — pure sequencing over scalar state, needs only `if/then/else` and `allowed`. Larger targets: the paper's three §5.1 models (insurance contract, two-asset Balancer pool, governance with parameters in state), all naturally multi-step and order-dependent, and never written as Part II |
+| TOOL-24 | Integration models in the new corpus | open | — | — | The deleted corpus was entirely unit-level — goldens, error cases, stress — and nothing exercised several features at once, which is where flaws *between* features surface. A standing requirement for the replacement. Cheapest first multi-step model: a **betting round** (P1 bets, P2 reacts, P3 reacts) — pure sequencing over scalar state, needs only `if/then/else` and `allowed`. Larger targets: the paper's three §5.1 models (insurance contract, two-asset Balancer pool, governance with parameters in state), all naturally multi-step and order-dependent, and never written as Part II |
 | TOOL-25 | [`docs/modeling.md`](modeling.md) — the from-zero modeling guide | runs | [P4](#p4-how-documents-teach) | — | 36 chapters, five acts. The on-ramp *before* `docs/guides/`: those teach GDS in a field's vocabulary and assume modeling is familiar; this assumes no mathematics past arithmetic, no programming, no vocabulary. Doubles as the author's reference while building. **Goes stale when:** RUN-20 lands (ch.13 pastes the current one-space `job 0 price = 20`); LANG-21 is named (ch.7 uses `derived`); CHK-11's format is decided (ch.24); SYN-08 or LANG-40 resolve (ch.4, ch.6); any `designed` feature it marks gets built. **Open:** whether Act I's savings-account example should become the gold-and-potions spine, since the guide currently carries two |
 
 ---
@@ -448,7 +448,7 @@ If a state both violates an invariant and satisfies `until`, the violation wins.
 
 **Policy.** Two things that resemble evidence are not, and neither may be used to argue for or against a design.
 
-*The corpus is not evidence.* `examples/` and `tests/fixtures/` were written as development scaffolding for work
+*The corpus is not evidence.* `examples/` and the former `tests/fixtures/` were written as development scaffolding for work
 that had already happened. They record what the parser accepted on the day they were written — not what the
 language is for, not what matters, not what users will want. Counting how many fixtures use a feature, which
 types appear in them, or how many files a change would break says nothing about whether a design is right. Tests
@@ -471,6 +471,16 @@ removes the author's ability to decide and substitutes someone else's guess abou
 evidence about which input types matter; fixture usage counts were cited as evidence that verification features
 impose no burden; and build sequencing was offered as a reason to reject a design. All three were invalid, and
 all three pointed toward a smaller language than the author wants.
+
+**The corpus was later deleted in full**, along with the two `examples/` models no document taught from. The
+reason is the drift this policy names. The fixtures began as scratch models written to exercise syntax the
+interpreter did not yet support, so there would be live files to run by hand while the first pass was being
+written; filing them under `tests/fixtures/` gave them an authority they were never meant to carry, and stating
+the policy did not stop them being read that way. Removing the files removes the thing that kept inviting the
+argument. Four passages in these documents turned out to be citing counts as argument, found only because the
+corpus they pointed at went away: LANG-12's claim to be the highest-value unbuilt feature, LANG-04's `>>` usage
+tally, Wave 0's case for comparisons as the keystone, and the randomness track's self-containment. Each had a
+real argument underneath — a dependency, not a tally — and each now states that instead.
 
 ---
 
@@ -990,6 +1000,169 @@ through as `pool: s.pool` — one line stating something meaningful (*the pool i
 flat record needs ten lines of bookkeeping.
 
 **Revisit if.** Real models show deep nesting is rare enough that the sugar is never reached for.
+
+---
+
+## D23. `^` takes an integer exponent; `pow` takes the rest
+
+**Decision.** `^` requires the **exponent** to be an `int`. The base may be any numeric type. A non-integer
+exponent is a check-time error naming `pow(base, exponent)`, a float-only built-in.
+
+| Form | Result | Notes |
+|---|---|---|
+| `int ^ int`, exponent ≥ 0 | `int` | exact repeated multiplication, unbounded per D1 |
+| `int ^ int`, exponent < 0 | arithmetic error | no integer answer exists |
+| `float ^ int` | `float` | negative exponent gives the reciprocal |
+| `decimal(N) ^ int`, exponent ≥ 0 | `decimal` | repeated multiplication, precision grows per D9 |
+| `pow(float, float)` | `float` | approximate |
+| `0 ^ 0` | `1` | convention, now stated |
+
+**Why the split is on the exponent, and why it is not arbitrary.** An integer exponent is repeated
+multiplication — a **polynomial**, which stays inside the arithmetic a solver decides. A non-integer exponent is
+`exp(y · ln x)`, a **transcendental**, which is undecidable over the reals and needs δ-complete procedures
+(CHK-07, CHK-05's hard-fragment list). One symbol covering both would mean **routine proofs on one side of it
+and a research problem on the other, with nothing in the source saying which** — and an author would cross that
+line by typing `0.5` where they had been typing `2`.
+
+Roxin refuses exactly this blur everywhere else in its numeric design: `/` on two ints (D5), `within` on float
+equality (NUM-06), `decimal` against `float` (D9). Putting the boundary in the syntax is the same decision
+applied to powers.
+
+**Why this is not two spellings of one idea (P3).** They are two operations with different guarantees. The
+obvious counter — *int `+` is exact and float `+` is not, and you do not split that* — fails, because float
+addition stays in linear arithmetic while a non-integer power leaves the decidable fragment entirely. The
+difference is not precision, it is **which questions can be answered**.
+
+**Also ratified here, previously `accidental` as SYN-01.** The operator was implemented, pinned by
+`precedence.rox`, and absent from §2.3's operator list entirely. Verified against the build and now written
+down: right-associative (`2^3^2 = 512`); binds tighter than unary minus (`-2^2 = -4`, matching mathematical
+convention and Python — Excel is the well-known counterexample at `4`); `0^0 = 1`; `int ^ negative` is a
+run-time error with a message that already names the constraint.
+
+**Alternatives considered.**
+- *Ratify everything as-is.* Cheapest, and the implementation is better than the registry implied. Rejected
+  because it blesses mixed-type promotion, settling part of NUM-01 sideways through an operator.
+- *Ratify precedence only, leave mixed types to NUM-01.* Honest separation, but leaves `2 ^ 3.0`
+  working-in-build and undefined-in-spec, with the provability boundary unmarked.
+- *Remove `^` until the maths set settles.* It works and is tested; removing to re-add is churn.
+
+**Costs.** One more built-in. An author writing `x ^ 0.5` gets an error and has to learn `pow` — mitigated by the
+error naming it. `pow` on `decimal` does not exist, so a non-integer power of a decimal must go through `float`
+deliberately.
+
+**Note.** LANG-26 listed non-integer powers as unresolved while `2.0 ^ 0.5` already worked. Corrected.
+
+**Revisit if.** A `decimal` `pow` is ever wanted, which would need an exactness story this decision does not have.
+
+---
+
+## D24. A sweep carries through to derived params; the console line shows both
+
+**Decision.** A `sweep p in [v1, v2, …]` clause overrides `p`, and **every param whose default depends on `p`,
+transitively, is re-evaluated with the override in place.** The console job line lists the overridden params
+*and their dependents*, and nothing else. The results table is unchanged — §6.2 already gives every declared
+param a column.
+
+```
+param a: int = 1
+param b: int = a * 10        -- depends on a
+
+run … sweep a in [1, 3]
+job 0 a = 1, b = 10
+job 1 a = 3, b = 30
+```
+
+**Why carrying through is ratification rather than a choice.** §6.1 states what a sweep does to `p` and is silent
+on params that derive from it. The build already propagates; the alternative freezes `b` at its default-`a`
+value, so `param b = a * 10` with a swept `a` would read `10` in every job. That is not a defensible
+alternative, it is a bug nobody would find. It is also what makes [ADM-05](#part-1--index) — sweeping a param
+used in `allowed`, mechanism design in one line — actually work, since the interesting case is sweeping one
+quantity that several rules derive from.
+
+**Why the console line and the results table carry different things.** They answer different questions. The
+console line exists to **tell one job from another**, so it carries exactly what differs — and a constant
+differs in no job, so it is noise there. The results table is read **without the model in hand**, so it carries
+everything; a reader with only a CSV cannot recompute a derived param.
+
+**Alternatives considered.**
+- *Freeze derived params at their default-environment values.* One param environment, simplest rule. Rejected:
+  silently wrong, in a way that survives review because the number looks plausible.
+- *Reject sweeping a param that others depend on.* Unambiguous, and forbids the most useful case outright.
+- *Console shows overrides only* (the current build). Compact, and hides a param that may be driving the entire
+  model until someone opens the results table.
+- *Console shows all declared params.* Matches §6.2 exactly, at the cost of repeating every constant on every
+  job line.
+
+**Depends on.** NUM-11's fix: resolving params by dependency supplies the graph this needs. Doing NUM-11 first
+makes this nearly free.
+
+**The step count follows the same rule** ([RUN-06](#part-1--index)). `for N steps` takes a param or an
+expression, not only a literal, and it is evaluated per job like any other param — so `for n steps` under
+`sweep n in [1, 3]` gives a 1-step job and a 3-step job, which is how you sweep the *horizon*. The consequence
+worth stating out loud is that **jobs may differ in row count**; §6.2's table already carries a `job` column, so
+ragged jobs need no schema change. Requiring a literal would carve out an exception to "a param is usable
+wherever a value is" and buy only rectangularity the schema does not need; evaluating `N` once in the default
+environment would silently ignore a sweep on it, which is the failure this record rejects.
+
+**Costs.** A param's value now varies between jobs, which is a larger idea than "a constant for the run" and is
+now stated in §6.1 rather than left to inference.
+
+**Revisit if.** Real models grow dependent chains long enough that the console line becomes unwieldy, which
+would argue for truncating it rather than changing what it means.
+
+---
+
+## D25. A sweep list may reference params, but not swept ones
+
+**Decision.** Sweep value lists are expressions, evaluated once in the default-param environment before any job
+exists. A list may reference any param that is **not itself swept**; referencing a swept param is a check-time
+error.
+
+```
+param k: int = 5
+sweep a in [k, k * 2]          -- ok: a sweeps over 5 and 10
+
+sweep k in [1, 2]
+sweep a in [k, k * 2]          -- error: k is itself swept
+```
+
+**Why lists cannot be evaluated per job.** A sweep list *determines* the job set, so it is evaluated before any
+job exists. D24's per-job rule cannot extend here — the question is circular.
+
+**Why the error rather than the default.** The build currently evaluates every list in the default environment,
+so the second example above produces four jobs in which `a` is 5 or 10 regardless of `k`:
+
+```
+job 0 k = 1, a = 5       job 2 k = 2, a = 5
+job 1 k = 1, a = 10      job 3 k = 2, a = 10
+```
+
+`job 2` reports `k = 2, a = 5` with a straight face. That is the failure class D24 rejected for derived params,
+appearing in the one place it is hardest to notice. The error names it instead.
+
+**Alternatives considered.**
+- *Literal lists only.* No environment question at all, and no silent wrongness — but it loses relative sweeps
+  (`[k, k * 2]` against a baseline) and adds the same exception to "a param is usable wherever a value is" that
+  [RUN-06](#part-1--index) just declined to make for step counts.
+- *Dependent sweeps: order the sweeps, evaluate a later list once per combination of earlier swept values*,
+  giving `(1,1), (1,2), (2,2), (2,4)`. The most expressive option, and rejected because **most of it already
+  exists**: to make `a` track `k`, declare `param a: int = k * 2` and sweep `k` — D24 carries it through with no
+  new sweep semantics. What dependent sweeps add beyond that is *several* `a` values per `k`, a nested design no
+  model has asked for yet, bought at the price of making sweep clauses **order-dependent** (swapping two lines
+  changes the job set) and breaking the rule that the job count is the product of the list lengths.
+
+**This decision is one-way-compatible.** Turning the error into dependent sweeps later is a compatible change;
+the reverse would not be.
+
+**The error must teach the alternative**, not just refuse:
+
+```
+sweep a in [k, k * 2]
+         ^ `k` is itself swept, so this list has no single value.
+           Either sweep `k` and declare `a` as a derived param, or use literal values.
+```
+
+**Depends on.** NUM-11's dependency graph supplies the check.
 
 ---
 
