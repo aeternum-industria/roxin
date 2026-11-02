@@ -101,7 +101,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | ADM-05 | Sweeping a parameter used in `allowed` | designed | — | §6.1 | Sweeps *the rules*, not the behavior — mechanism design in one line. Paper §5.1's governance example |
 | ADM-06 | Rules that change mid-run | designed | — | §8 | Resolved by ADM-03 + state. Whatever toggles a rule must be visible in the state; a `phase`/`mode` field is the normal pattern. **Note:** a Roxin `step` is not a stage of the run — every step runs every tick |
 | ADM-07 | Enumerable admissible sets for reachability | designed | — | §8 | `int` range, `decimal(N)` range, finite set, choice type. Float ranges are not enumerable |
-| ADM-08 | What `U_x` is when `allowed:` is absent | open | — | §8 | Def 4.1 needs `U_x`. With no clause, `U_x` is the whole declared type: `bool` gives 2 values, a choice type gives N, `int` and `decimal` are unbounded, `float` is not enumerable at all. Four options argued. **(A)** Absent means the full type; exploration errors when the type is not enumerable. Truthful — Def 2.5 permits `U_x = U` — and costs nothing to anyone who only simulates. **(B)** Mandatory on any step with `input:`. Everything explorable by construction, but rejected on P3 grounds: it forces statements the modeler does not believe, such as a bound on a Fibonacci counter, which is exactly the boilerplate-by-imitation failure P3 exists to prevent. **(C)** Optional plus check-time explorability reporting — see CHK-09. **(D)** A search bound supplied at the tool boundary, kept rigorously separate from legality; if one is ever recorded as the other, the model stops determining the answer. **Lean, not ratified:** A as base semantics, C layered on it, D afterwards, with `searched:` and `allowed:` printed as two lines from two sources |
+| ADM-08 | What `U_x` is when `allowed:` is absent | designed | [D19](#d19-absent-allowed-means-the-whole-declared-type) | §8 | **Settled: absent means the whole declared type.** Def 4.1 needs `U_x`. With no clause, `U_x` is the whole declared type: `bool` gives 2 values, a choice type gives N, `int` and `decimal` are unbounded, `float` is not enumerable at all. Four options argued. **(A)** Absent means the full type; exploration errors when the type is not enumerable. Truthful — Def 2.5 permits `U_x = U` — and costs nothing to anyone who only simulates. **(B)** Mandatory on any step with `input:`. Everything explorable by construction, but rejected on P3 grounds: it forces statements the modeler does not believe, such as a bound on a Fibonacci counter, which is exactly the boilerplate-by-imitation failure P3 exists to prevent. **(C)** Optional plus check-time explorability reporting — see CHK-09. **(D)** A search bound supplied at the tool boundary, kept rigorously separate from legality; if one is ever recorded as the other, the model stops determining the answer. **Ruled:** A as base semantics with C's direction accepted; D deferred until choice types land. See D19 |
 
 ## 4. Numbers
 
@@ -131,7 +131,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | CHK-06 | Attainability correspondence `F` | rejected | — | — | Paper Def 3.1. Analysis machinery; nobody implements it |
 | CHK-07 | Contingent derivative, Lipschitz, existence theory | rejected | — | — | Paper §3. Requires convexity that general data structures cannot satisfy |
 | CHK-08 | Local controllability | rejected | — | — | Paper Thm 4.4 requires `X ⊆ ℝⁿ` |
-| CHK-09 | Explorability reported at check time | open | — | — | The checker already walks every step, so it can report per step whether `U_x` is enumerable and what the branching factor is, and per model whether the model is explorable at all. The author learns while writing rather than when the explorer refuses. Cost: this would be Roxin's first non-error diagnostic — today everything is pass or fail. **Lean:** present it as a property of the model, the way a type is, not as a warning or a complaint. Depends on ADM-08 |
+| CHK-09 | Explorability reported at check time | open | — | — | The checker already walks every step, so it can report per step whether `U_x` is enumerable and what the branching factor is, and per model whether the model is explorable at all. The author learns while writing rather than when the explorer refuses. Cost: this would be Roxin's first non-error diagnostic — today everything is pass or fail. **Direction settled by [D19](#d19-absent-allowed-means-the-whole-declared-type):** present it as a property of the model, the way a type is — not a warning, not a complaint. What remains open is the *mechanism*: always-printed information, a warning stream, or a separate `--explain` mode, and whether anything may ever be promoted to an error. See CHK-10 |
 | CHK-10 | `provable` — a restrict-only intent declaration | open | — | — | A line in the model file that makes the checker refuse constructs which destroy provability, stopping the author while writing instead of when a proof times out hours later. Safe because it only ever **restricts**: anything accepted under it behaves identically with the line deleted, so no program changes meaning. Lives in the file, not on the command line, so the file still determines the answer. Shaped like Rust's `forbid(unsafe_code)`, not like C's `-ffast-math`. See LANG-39 |
 | CHK-11 | Counterexample presentation | open | — | — | **The likely differentiator.** A failed inductive step yields a state, a legal input, and the successor that breaks the claim — and nothing longer can exist, because the check never looks at a trajectory. Both states are flat records so both print, and all three are valid Roxin the author can paste back in and run. Contrast a simulation failure, which reports "broke at step 437" and leaves the author reading backwards. Dafny says "assertion might not hold" largely because a heap counterexample often has no renderable form; Roxin always has one. A failed proof that hands back a runnable model is a debugging experience rather than a verification experience. Depends on CHK-05. **A candidate format is drafted in [`modeling.md`](modeling.md) ch.24**, marked undecided: invariant name and step, then `from` / `input` / `gives`, then the claim beside the arithmetic that falsifies it, then a `reproduce:` line that is valid Roxin the reader can paste and run. The `reproduce:` line is the part worth protecting |
 
@@ -165,7 +165,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-24 | Model and experiment as separate categories | designed | D16 | §3 | Parser and interpreter collect one flat item list today. Prerequisite for the REPL (TOOL-20) and for any exploration form |
 | RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17, D18 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
 | RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships |
-| RUN-27 | Type-derived membership sets | open | — | §8 | A `bool` input has exactly two admissible values with no `allowed` written at all; a choice type has as many as it has options. Enumerability is partly a property of the **type**, not only the clause — so bool and choice inputs may be explorable with zero author effort, which likely makes the best first demo |
+| RUN-27 | Type-derived membership sets | designed | [D19](#d19-absent-allowed-means-the-whole-declared-type) | §8 | **Resolved by D19:** absent `allowed` means the whole declared type, so enumerability follows from the type as much as from the clause. A `bool` input has two admissible values and a choice type has as many as it has options, both with zero author effort — which makes a choice-typed step the best first explorer demo. The residue is NUM-09: a range-refined integer type (`type Dial = int in 0..10`) would make an `int` input type-derived and finite too, which is a further argument for un-deferring it |
 | RUN-28 | Invariant-violating successors in fan-out | open | — | §8 | D8 covers runs: the violating state is the flagged final row. Exploration exists to show what *could* happen, so the argument is that they appear and are marked. This is the choice that makes the explorer useful for safety work rather than curiosity |
 
 ## 7. Tooling, testing, release
@@ -752,6 +752,54 @@ multi-step model exists.
 
 **Revisit if.** Real multi-step models show users reaching for step-level far more than tick-level, which would
 argue for flipping the default.
+
+---
+
+## D19. Absent `allowed` means the whole declared type
+
+**Decision.** A step with no `allowed:` clause has `U_x = U`: the admissible set is every value of the input's
+declared type. Nothing is invented and nothing is required. Definition 2.5 permits `U_x = U` — it says
+`U : X → ℘(U)`, and the whole set is a member of its own power set — so this is the formalism's own reading, not
+a convenience.
+
+Enumerability therefore follows from the **type** as much as from the clause. A `bool` input has exactly two
+admissible values with no clause written; a choice type has as many as it has options; `int` and `decimal` are
+unbounded and `float` is not enumerable at all. The checker **reports explorability as a property of the model**,
+the way it reports a type — not as a warning and not as a complaint (CHK-09; the mechanism is still open).
+
+A search restriction supplied at the tool boundary is **deferred, not rejected** (ADM-08 option D).
+
+**Alternatives considered.**
+- *Mandatory `allowed` on any step with an `input:` stage.* Every model explorable by construction, and the
+  strongest possible form of Roxin's claim that legality belongs in the model. Rejected under **P3**: it forces
+  statements the modeller does not believe. A Fibonacci counter has no meaningful bound, so `a in 0..2^64` is
+  written only to satisfy the tool — which is precisely the boilerplate-by-imitation that P3 exists to prevent.
+  The language would manufacture the disease it was built to cure.
+- *A alone, with no commitment on reporting.* Keeps each decision to one thing, and avoids pre-committing the
+  "does Roxin have non-error diagnostics" question. Rejected because it leaves the authoring experience
+  unaddressed: a model stays silently unexplorable until the explorer refuses, hours after the choice that cost
+  it was made.
+- *Build the search bound first.* Rejected on sequencing, and the reason is evidential rather than
+  organisational: until choice types (LANG-17) exist, every input in reach is numeric, so a search bound would be
+  designed against a corpus whose shape is an artifact of what the parser currently accepts — which P2 forbids
+  treating as evidence. Most real decisions are categorical (`Buy | Sell | Hold`; a thermostat's actual choice is
+  on or off), so choice types are expected to convert a large share of unexplorable steps into free ones. How
+  large is unknown, and that is the point: D is deferred until the remaining problem can be measured.
+
+**Why.** Do not invent constraints the author did not state, and do not let the author discover late that they
+gave up a capability. Those two are in tension only if reporting is treated as disapproval; as information, they
+compose.
+
+**Costs.** A model with a numeric decision and no bound is simulable and not explorable, and will stay that way
+until someone writes a bound or the type becomes categorical. The checker gains its first output that is neither
+pass nor fail.
+
+**When D lands.** The restriction must be recorded in the output as a separate line from the model's own rule —
+`searched:` beside `allowed:`, two lines from two sources. Merging them would make a tool argument
+indistinguishable from a model property, which ends the claim that the file determines the answer.
+
+**Revisit if.** Choice types land and the share of unexplorable steps does *not* fall, which would mean
+continuous decisions are commoner than expected and D needs to be good rather than minimal.
 
 ---
 
