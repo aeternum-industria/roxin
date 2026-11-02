@@ -85,7 +85,7 @@ expr  ::= literal | name | expr.field
 
 Operators, loosest to tightest: `or`; `and`; `not`; comparisons (`== != < <= > >=`, with optional `within`); `+ -`; `* // %`; unary `-`; field access. Evaluation is strict and left to right. `if` evaluates only the taken branch. `and` and `or` short-circuit.
 
-Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `to_float`, `sample` distributions (section 7). Every built-in has an effect label (`pure` or `random`) in the one function registry **[settled]**. Only `random` functions may appear in `input:` expressions.
+Built-ins in v1: `sign`, `abs`, `min`, `max`, `round`, `sqrt` (float), `to_float`, `sample` distributions (section 7). Every built-in has an effect label (`pure` or `random`) in the one function registry **[settled]**. `random` functions may appear **only** in `input:` expressions.
 
 ## 3. Declarations
 

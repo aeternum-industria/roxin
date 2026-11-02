@@ -49,11 +49,11 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-11 | `and` / `or` / `not` | designed | — | §2.3 | — |
 | LANG-12 | `if / then / else` as an expression | designed | — | §2.3 | **Gates 9 of 20 pending fixtures.** Highest-value unbuilt feature |
 | LANG-13 | Built-in calls (`sign`, `abs`, `min`, `max`, `sqrt`) | designed | — | §2.3 | Full math set unresolved — see LANG-26 |
-| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Currently **state-specific** — the `s` is the state. If LANG-41 lands on record spread, this must generalize to a spread over *any* record, at any depth |
+| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Mechanism **pass-through** — *every field I did not mention is unchanged* — which satisfies D2's completeness requirement. Distinct from §2.3's `with`, which is an *expression* building a modified copy of a record; [D22](#d22-path-assignment-is-shorthand-for-with) keeps both because they do different jobs |
 | LANG-15 | `step` readable in `input:` / `allowed:` | designed | — | §5 | — |
 | LANG-16 | Named, swappable `input map` | designed | — | §3 | — |
-| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | **Already settled in §3; the flat-scalar limit is a build stage, not a design principle.** Composite types are Tier 1 in the type-cost table (Part 3) — SMT handles records natively as algebraic datatypes, so records-of-records cost essentially nothing in provability and come nowhere near LANG-31's line. The author's motivation is structural honesty rather than capability: a flat `World { pool_x, pool_y, trader_gold, trader_potions }` **asserts that four things have equal standing when they do not**, which is P3's per-line test applied to the state declaration. **Prerequisite:** LANG-41 ([D22](#d22-path-assignment-is-shorthand-for-record-spread)), or nesting makes mechanisms worse than flat. See also LANG-42 for the `distinct` form and LANG-34 for record equality. Choices have no payloads in v1; see LANG-25 |
-| LANG-41 | Updating part of a record | designed | [D22](#d22-path-assignment-is-shorthand-for-record-spread) | — | **Settled: both forms, path is sugar for spread, grouped by root field.** | **Make-or-break for LANG-17.** With `state World { pool: Pool, trader: Trader }` and [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), changing one leaf means rebuilding the whole subtree — `pool: Pool { x: s.pool.x + 1, y: s.pool.y }`. Fine for two fields, miserable for ten, so nesting without this is a regression. **Two designs.** *Record spread:* generalize `..s` from "the state" to **any record** — `pool: { ..s.pool, x: s.pool.x + 1 }`. Keeps D2 exactly as it is, since one top-level field is still set once, and reuses machinery LANG-14 already designs. *Path assignment:* let the left side be a path — `pool.x: s.pool.x + 1`. Reads better, and breaks D2: is setting `pool.x` and `pool.y` equivalent to setting `pool`, and what happens when both `pool:` and `pool.x:` appear? That is a new check and a new error class. **Also settles D2 at depth:** if "every field" means every *top-level* field, a ten-field subtree passes through as `pool: s.pool` — one line that states something meaningful (*the pool is unchanged*) where flat needs ten lines of bookkeeping. Nesting and D2 pull in the same direction |
+| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | **Already settled in §3; the flat-scalar limit is a build stage, not a design principle.** Composite types are Tier 1 in the type-cost table (Part 3) — SMT handles records natively as algebraic datatypes, so records-of-records cost essentially nothing in provability and come nowhere near LANG-31's line. The author's motivation is structural honesty rather than capability: a flat `World { pool_x, pool_y, trader_gold, trader_potions }` **asserts that four things have equal standing when they do not**, which is P3's per-line test applied to the state declaration. **Prerequisite:** LANG-41 ([D22](#d22-path-assignment-is-shorthand-for-with)), or nesting makes mechanisms worse than flat. See also LANG-42 for the `distinct` form and LANG-34 for record equality. Choices have no payloads in v1; see LANG-25 |
+| LANG-41 | Updating part of a record | designed | [D22](#d22-path-assignment-is-shorthand-for-with) | §2.3 | **Settled: `with` is the longhand (already in §2.3), path assignment is sugar for it, grouped by root field.** Make-or-break for LANG-17: With `state World { pool: Pool, trader: Trader }` and [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), changing one leaf means rebuilding the whole subtree — `pool: Pool { x: s.pool.x + 1, y: s.pool.y }`. Fine for two fields, miserable for ten, so nesting without this is a regression. **Also settles D2 at depth:** if "every field" means every *top-level* field, a ten-field subtree passes through as `pool: s.pool` — one line that states something meaningful (*the pool is unchanged*) where flat needs ten lines of bookkeeping. Nesting and D2 pull in the same direction |
 | LANG-18 | `data` — replayed CSV series | designed | — | §3 | Supplies inputs that **were** observed; CHK-12 derives inputs that were **not**. The two cover the paper's two data situations and should be documented as a pair. Running past end of data is an error; `for N steps` from data length unresolved — see RUN-05 |
 | LANG-19 | `until` stopping predicate | designed | [D10](#d10-order-of-checks-in-a-run) | §6 | — |
 | LANG-20 | `invariant` | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged), [D10](#d10-order-of-checks-in-a-run) | §6 | **Cite paper §4.4** — property `P` along a trajectory. Stop saying it is outside the formalism |
@@ -72,6 +72,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-32 | `policy` as a keyword | rejected | — | — | Paper says Input Map. Keep the rule, but stop calling `policy` cadCAD-only vocabulary — gds-core has a `Policy` role under Zargham's direction |
 | LANG-33 | Domain aliases (turn, block, generation) | rejected | — | — | One vocabulary; guides bridge once then switch |
 | LANG-34 | Record equality, given a distinct-type form | open | — | — | **Much less load-bearing than it was, because LANG-42 decouples the two prizes.** The question looked like a forced choice: structural equality buys *generic invariants* (`invariant NonNegative(s: { gold: int })` applying to any state with a `gold` field, a shared library of conservation and bounds checks across unrelated models), while nominal buys *units* (`Celsius` and `Fahrenheit`, both `float`, not interchangeable — the single best safety feature a modelling language has). With a `distinct` form, units come from LANG-42 regardless, so record equality can be chosen on its own merits. **Note the cadCAD-ri context:** structural equality was load-bearing there because `A >> B` required A's codomain to equal B's domain, and demanding two independently-written blocks agree on a type *name* would have been brutal. [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) means Roxin has no interface matching at all — every step maps the state type to itself — so that motivation does not apply here. **Forward cost either way:** if LANG-28 ever un-defers, interface matching arrives with it and nominal becomes brittle in exactly the way it was for cadCAD-ri |
+| LANG-43 | `fn` — user-defined pure functions | open | — | §2.3 | **The largest expressiveness gap, and until now the only one with no row.** §2.3's expression language is literals, names, field access, operators, `if/then/else`, record construction, `with`, and calls into a **fixed registry of built-ins**. There is no way to define a named helper that takes arguments: `input map`, `invariant` and `metric` are named expressions over the state, but none takes a parameter. So every piece of shared logic must be written inline at every use — which collides directly with the duplicated-expression warning in [`modeling.md`](modeling.md) ch.10, where two copies of one idea drift apart during an edit. **Fully provable**, like the rest of the expressiveness set: a pure function is inlined or axiomatised, and it is not a general-purpose feature. The general-purpose features — mutation, unbounded recursion, I/O, dynamic dispatch, exceptions — are none of them needed to write logic over structured data. **Distinct from LANG-24:** `let` names an intermediate *within* one expression; `fn` names logic reusable *across* expressions. Both are wanted and they do different jobs. **Clean effect rule available:** built-ins already carry a `pure`/`random` label in the one function registry, and a user `fn` is `pure` by construction since it may only call pure things — so the existing machinery extends with no new concept. **Open:** syntax; whether recursion is permitted at all or only bounded; whether a `fn` may be generic over record shape, which depends on LANG-34 and LANG-42. **Priority note:** `let` and `fn` are the actual expressiveness blockers, not collections — a complex state is useless if no interesting logic can be written about it |
 | LANG-42 | `distinct` — a type that is not its representation | open | — | §3 | **The fungible / non-fungible primitive.** LANG-17 lists records, choices and aliases; this is the missing fourth form. `type Amount = decimal(18)` is an **alias** — Amount *is* decimal(18), interchangeable, a shorter word. `type Celsius = distinct float` is a **distinct type** — not a float, converted explicitly. It is the per-type nominal marker, applied at the definition, and it is safe there under the standing *strengthen at the definition* principle because it makes **fewer** things acceptable. A general per-type `structural` marker is the opposite and must be rejected on the same principle: it would weaken every use site in the program, including ones written later by someone else. Structural shape-matching therefore belongs as an opt-in on the **consuming** invariant or metric, never on a type declaration. **Open: what an unmarked `type X = Y` means.** The standing *boundary rule* already eliminates one option — default-alias silently weakens a guarantee, since someone writing `type Celsius = float` expecting distinctness gets `celsius + fahrenheit` type-checking with no complaint. Default-distinct survives it: being wrong is *visible and harmless*, because `type Amount = decimal(18)` used as a shorthand fails immediately and loudly rather than quietly. So the live options are **default-distinct** or **mark both and have no unmarked form**; *Defaults over configuration* argues for the former, zero-surprise for the latter. **Newly surfaced wrinkle:** if records are structural by default, `type Pool = { x: float, y: float }` unmarked names a *shape*, while `type Celsius = float` unmarked renames a *named type* — so the natural default may legitimately differ between the two cases, which needs deciding rather than assuming |
 | LANG-36 | `map` / `filter` / `fold` over collections | open | — | — | Depends on lists/maps. Termination as an opt-in guarantee |
 | LANG-37 | `extern` — foreign code | deferred | — | §11 | Four placeholder rules hold the door open: one function registry, effect labels, `extern` reserved, effects never inside mechanisms. WebAssembly is the first candidate |
@@ -918,56 +919,62 @@ each other, which is the symptom the one-state-space prescription would be faili
 
 ---
 
-## D22. Path assignment is shorthand for record spread
+## D22. Path assignment is shorthand for `with`
+
+*Recorded 2 Nov 2026. Supersedes the first draft of this record, which invented a `{ ..s.pool, x: … }` spread
+form in ignorance of the `with` expression already designed in §2.3. There is one record-update syntax and it is
+`with`.*
 
 **Decision.** A mechanism may update part of a record two ways, and the second is **defined as** the first:
 
 ```
-pool: { ..s.pool, x: s.pool.x + 1 }     -- spread
-pool.x: s.pool.x + 1                    -- path, shorthand for the above
+pool: s.pool with { x: s.pool.x + 1 }     -- longhand, the §2.3 record-update expression
+pool.x: s.pool.x + 1                      -- shorthand for exactly that
 ```
 
 **The desugaring groups by root field.** Collect every path assignment in a mechanism, group them by their root,
-and merge each group into one spread. Two paths **conflict when one is a prefix of the other**, equality
+and merge each group into one `with`. Two paths **conflict when one is a prefix of the other**, equality
 included.
 
 ```
-pool.x: a    +  pool.y: b     ->  pool: { ..s.pool, x: a, y: b }                        ok
-pool.a.b: 1  +  pool.a.c: 2   ->  pool: { ..s.pool, a: { ..s.pool.a, b: 1, c: 2 } }      ok
-pool: P      +  pool.x: a     ->  conflict: `pool` is a prefix of `pool.x`               error
-pool.a: X    +  pool.a.b: 1   ->  conflict                                               error
+pool.x: a    +  pool.y: b     ->  pool: s.pool with { x: a, y: b }                        ok
+pool.a.b: 1  +  pool.a.c: 2   ->  pool: s.pool with { a: s.pool.a with { b: 1, c: 2 } }    ok
+pool: P      +  pool.x: a     ->  conflict: `pool` is a prefix of `pool.x`                 error
+pool.a: X    +  pool.a.b: 1   ->  conflict                                                 error
 ```
 
 After desugaring, [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) applies
 **completely unchanged** — every top-level field set exactly once. No new rule, no new error class. The checker,
-the explorer and any prover see only the spread form.
+the explorer and any prover see only the `with` form.
 
-**Why this does not violate "exactly one way to say each thing".** Because it is not a second way to say a
-thing — it is one thing with an abbreviation, and `modeling.md` ch.4 already states the test it passes: *where
-Roxin offers a convenience, the convenience is defined as shorthand for something you could have written
-longhand; it is never an exception to a rule you were taught.* `..s` is already such a convenience.
+**Not to be confused with `..s`.** LANG-14's `..s` is mechanism *pass-through* — "every field I did not mention
+is unchanged" — which is about satisfying D2's completeness requirement. `with` is an *expression* that builds a
+modified copy of a record. Different jobs; both stay.
+
+**Why this does not violate "exactly one way to say each thing".** It is not a second way to say a thing — it is
+one thing with an abbreviation, and `modeling.md` ch.4 states the test it passes: *where Roxin offers a
+convenience, the convenience is defined as shorthand for something you could have written longhand; it is never
+an exception to a rule you were taught.*
 
 **Alternatives considered.**
-- *Spread only.* Fine at one level of nesting, awful at three — `a: { ..s.a, b: { ..s.a.b, c: { ..s.a.b.c, d: 1 } } }`
+- *`with` only.* Fine at one level, awful at three — `a: s.a with { b: s.a.b with { c: s.a.b.c with { d: 1 } } }`
   against `a.b.c.d: 1`. Rejected because it makes deep records unusable and so quietly discourages LANG-17.
-- *Path only.* Reads best, but breaks D2 outright: is setting `pool.x` and `pool.y` the same as setting `pool`,
-  and what happens when both `pool:` and `pool.x:` appear? A new check and a new error class, where sugar needs
-  neither.
+- *Path only.* Reads best, but breaks D2: is setting `pool.x` and `pool.y` the same as setting `pool`, and what
+  happens when both `pool:` and `pool.x:` appear? A new check and a new error class, where sugar needs neither.
 - *Both as independent primitives.* Two genuine ways to say one thing, which P3 forbids. The sugar relationship
-  is what makes having both legitimate; without it this would be rejected.
+  is what makes having both legitimate.
 
-**Where the sugar actually earns itself: depth, not breadth.** Ten top-level fields needing updates is ten lines
-either way. The win is at three levels of nesting — which is also a standing argument for keeping state shallow.
+**Where the sugar earns itself: depth, not breadth.** Ten top-level fields needing updates is ten lines either
+way. The win is at three levels of nesting — which is also a standing argument for keeping state shallow.
 
-**Costs.** The desugaring is grouped rather than per-line, and a naive per-line expansion is wrong: it would
-turn `pool.x` plus `pool.y` into two assignments to `pool` and reject the most natural thing anyone would write.
+**Costs.** The desugaring is grouped rather than per-line; a naive per-line expansion would turn `pool.x` plus
+`pool.y` into two assignments to `pool` and reject the most natural thing anyone would write.
 
 **Also settles D2 at depth.** "Every field" means every **top-level** field, so a ten-field subtree passes
 through as `pool: s.pool` — one line stating something meaningful (*the pool is unchanged this step*) where a
-flat record needs ten lines of bookkeeping. Nesting and D2 pull in the same direction.
+flat record needs ten lines of bookkeeping.
 
-**Revisit if.** Real models show deep nesting is rare enough that the sugar is never reached for, in which case
-it is surface area with no customer.
+**Revisit if.** Real models show deep nesting is rare enough that the sugar is never reached for.
 
 ---
 
