@@ -56,7 +56,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-18 | `data` — replayed CSV series | designed | — | §3 | Running past end of data is an error; `for N steps` from data length unresolved — see RUN-05 |
 | LANG-19 | `until` stopping predicate | designed | [D10](#d10-order-of-checks-in-a-run) | §6 | — |
 | LANG-20 | `invariant` | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged), [D10](#d10-order-of-checks-in-a-run) | §6 | **Cite paper §4.4** — property `P` along a trajectory. Stop saying it is outside the formalism |
-| LANG-21 | Per-step derived observable (currently `metric`) | designed | — | §3 | **Rename.** Paper's "metric" is `d_X` (Assumption 3.2), a distance function. Candidates: `observe`, `derived`, `track`, `report` |
+| LANG-21 | Per-step derived observable (currently `metric`) | designed | — | §3 | **Rename.** Paper's "metric" is `d_X` (Assumption 3.2), a distance function. Candidates: `observe`, `derived`, `track`, `report`. The declaration shape is settled by §3 — `metric Name(s: State): type = expr`, the same shape as `invariant` — so only the keyword is open. [`modeling.md`](modeling.md) ch.7 writes **`derived`** as a placeholder and says so in the text; naming this invalidates that passage and four later cross-references |
 | LANG-22 | Lists, maps | open | — | — | **The gap against the GDS premise.** Part I motivates GDS on arbitrary data structures; Roxin has flat scalar records. Either build, or state in the README which GDS models Roxin is for. **This is the highest-consequence open decision for verification.** Multiplicity from *data* (one list of N markets) leaves the easy fragment, because reasoning over unbounded-length collections needs quantifiers or bounded unrolling. Multiplicity from *structure* (N declared copies) stays finite and statically known, so a proof sees more of the same thing. Settle it consciously rather than by default — see CHK-05 |
 | LANG-23 | Agent populations / graphs | open | — | — | Depends on LANG-22. Needed by every agent-based model in the cadCAD corpus |
 | LANG-24 | Local `let` bindings | open | — | — | Collected from real cadCAD models |
@@ -75,6 +75,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-37 | `extern` — foreign code | deferred | — | §11 | Four placeholder rules hold the door open: one function registry, effect labels, `extern` reserved, effects never inside mechanisms. WebAssembly is the first candidate |
 | LANG-39 | Loose and strict modes | open | — | — | Whether Roxin should offer a relaxed dialect alongside a verified one. Three distinct axes get bundled under "strict" and their costs are not comparable. **Ceremony** — how much must be declared before anything runs; loosening means inference and defaults and changes no program's meaning. **Static checking** — types, undeclared names, arity; loosening changes nothing for programs that already pass. **Runtime semantics** — admissibility, invariants, numeric exactness; loosening means the same file yields a different trajectory, which ends the property that the file determines the answer. **Lean, not ratified:** no mode. The gradient is already carried by the source text — a model stating no claims has nothing to check, not because checking was disabled but because nothing was asserted, and each clause the author adds buys a capability rather than levying a tax. The only legitimate mode shape is restrict-only intent, CHK-10. **Precedent read:** JS `"use strict"` was damage control for semantics that could not be changed, and the tell is that ES modules are strict with no opt-out; TypeScript's non-strict mode exists for incremental migration of an existing corpus, which Roxin does not have; PHP's `declare(strict_types=1)` applies at the caller's file and breaks cross-file reasoning; Rust's `unsafe` is routinely miscited as two modes but disables nothing, unlocking five operations inside a marked region |
 | LANG-38 | Restricted state update map `f\|_x` | deferred | — | — | Paper Def 2.7 — `f` with the state fixed, leaving only the input free. Its *image* is Def 4.1's `R(x)`, so RUN-25 surfaces it even though the map itself stays internal. The object an inductive proof quantifies over. Nobody implements it, including gds-core |
+| LANG-40 | Infer `system` for a single-step model | open | — | §5 | Surfaced by writing [`modeling.md`](modeling.md) ch.6: `system Shopping: Player = Shop` cannot be justified to a reader when there is one step. It is three names already written, arranged to point at each other, and it fails P3's per-line test until `>>` exists. Options: infer it when exactly one `step` is declared; fold it into `run`; keep it and accept the ceremony. Keeping it has a real argument — the model/experiment line (D16) puts `system` on the model side and `run` on the question side, and inference blurs where a reader looks for the model's shape |
 
 ## 2. Syntax and lexing
 
@@ -87,6 +88,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | SYN-05 | `5--3` silently becomes `5` | defect | — | — | Comment swallows the subtraction. No fixture, no decision record (severity low) |
 | SYN-06 | Indentation layout — four spaces, tabs rejected, brackets suspend | runs | D12 | §2 | `layout.rs` still carries `// TODO: Maybe allow 2/4 space indents both?` |
 | SYN-07 | Lexical conventions — number underscores, four string escapes, ASCII identifiers, `--` comments | runs | D13 | §2 | No hex or binary literals yet |
+| SYN-08 | `step` names two different things | open | — | §5 | `step Shop:` declares a rule; `step` is also the tick index readable in `input:` and `allowed:` but **not** `mechanism:` (§5). A newcomer's first guess about what `step` means is therefore wrong in two of the three places they will try it. Surfaced by writing [`modeling.md`](modeling.md) ch.4, which works around it by never naming the keyword — a reliable tell. Rename candidates for the index: `tick` (matches D18's vocabulary), `k` (matches §5's own prose and the papers), `now`, `index`. §5 justifies the index as sugar for a counter in the state, which the guide uses as a teaching point and which a rename does not disturb |
 
 ## 3. Admissibility
 
@@ -131,7 +133,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | CHK-08 | Local controllability | rejected | — | — | Paper Thm 4.4 requires `X ⊆ ℝⁿ` |
 | CHK-09 | Explorability reported at check time | open | — | — | The checker already walks every step, so it can report per step whether `U_x` is enumerable and what the branching factor is, and per model whether the model is explorable at all. The author learns while writing rather than when the explorer refuses. Cost: this would be Roxin's first non-error diagnostic — today everything is pass or fail. **Lean:** present it as a property of the model, the way a type is, not as a warning or a complaint. Depends on ADM-08 |
 | CHK-10 | `provable` — a restrict-only intent declaration | open | — | — | A line in the model file that makes the checker refuse constructs which destroy provability, stopping the author while writing instead of when a proof times out hours later. Safe because it only ever **restricts**: anything accepted under it behaves identically with the line deleted, so no program changes meaning. Lives in the file, not on the command line, so the file still determines the answer. Shaped like Rust's `forbid(unsafe_code)`, not like C's `-ffast-math`. See LANG-39 |
-| CHK-11 | Counterexample presentation | open | — | — | **The likely differentiator.** A failed inductive step yields a state, a legal input, and the successor that breaks the claim — and nothing longer can exist, because the check never looks at a trajectory. Both states are flat records so both print, and all three are valid Roxin the author can paste back in and run. Contrast a simulation failure, which reports "broke at step 437" and leaves the author reading backwards. Dafny says "assertion might not hold" largely because a heap counterexample often has no renderable form; Roxin always has one. A failed proof that hands back a runnable model is a debugging experience rather than a verification experience. Depends on CHK-05 |
+| CHK-11 | Counterexample presentation | open | — | — | **The likely differentiator.** A failed inductive step yields a state, a legal input, and the successor that breaks the claim — and nothing longer can exist, because the check never looks at a trajectory. Both states are flat records so both print, and all three are valid Roxin the author can paste back in and run. Contrast a simulation failure, which reports "broke at step 437" and leaves the author reading backwards. Dafny says "assertion might not hold" largely because a heap counterexample often has no renderable form; Roxin always has one. A failed proof that hands back a runnable model is a debugging experience rather than a verification experience. Depends on CHK-05. **A candidate format is drafted in [`modeling.md`](modeling.md) ch.24**, marked undecided: invariant name and step, then `from` / `input` / `gives`, then the claim beside the arithmetic that falsifies it, then a `reproduce:` line that is valid Roxin the reader can paste and run. The `reproduce:` line is the part worth protecting |
 
 ## 6. Execution and results
 
@@ -193,6 +195,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | TOOL-21 | `unknown_sweep_param.expected` is stale | defect | — | — | Build now adds line/column. The analogous path in `eval_params` still uses `Span {0,0}` (severity low) |
 | TOOL-23 | Syntax for experiments and A/B variants | open | — | — | Currently a sketch. Interacts with named `input map` |
 | TOOL-24 | Integration models in the fixture corpus | open | — | — | The 52 fixtures are unit-level — goldens, error cases, stress — and nothing exercises several features at once, which is where flaws *between* features surface. `pending/` is the right home but all 20 are one-feature-ahead and simple. Cheapest first multi-step fixture: a **betting round** (P1 bets, P2 reacts, P3 reacts) — pure sequencing over scalar state, needs only `if/then/else` and `allowed`. Larger targets: the paper's three §5.1 models (insurance contract, two-asset Balancer pool, governance with parameters in state), all naturally multi-step and order-dependent, and never written as Part II |
+| TOOL-25 | [`docs/modeling.md`](modeling.md) — the from-zero modeling guide | runs | [P4](#p4-how-documents-teach) | — | 36 chapters, five acts. The on-ramp *before* `docs/guides/`: those teach GDS in a field's vocabulary and assume modeling is familiar; this assumes no mathematics past arithmetic, no programming, no vocabulary. Doubles as the author's reference while building. **Goes stale when:** RUN-20 lands (ch.13 pastes the current one-space `job 0 price = 20`); LANG-21 is named (ch.7 uses `derived`); CHK-11's format is decided (ch.24); SYN-08 or LANG-40 resolve (ch.4, ch.6); any `designed` feature it marks gets built. **Open:** whether Act I's savings-account example should become the gold-and-potions spine, since the guide currently carries two |
 
 ---
 
@@ -496,6 +499,51 @@ follow that any clause is mandatory. Forcing one produces precisely what this po
 
 **Where this bites.** [ADM-08](#part-1--index) (rejecting mandatory `allowed`), [LANG-39](#part-1--index) (modes),
 and the whole of Part 1's `open` set, which should be read as "not yet argued," never as "not worth doing."
+
+---
+
+### P4. How documents teach
+
+**Policy.** Every explanatory document in this project — the modeling guide, the field guides, the tutorial parts
+of the reference — is held to four rules. They are checkable, and a document that fails one is wrong, not merely
+unpolished.
+
+**1. Teach by poking.** No idea is introduced, demonstrated once, and left. Every concept is stated plainly,
+watched in motion with the reader a step at a time, then **deliberately broken** so the reader sees what the idea
+was holding up — then repaired, then poked somewhere else so they see how it bends under other conditions. A
+reader who has only seen an idea work has not met it. They have met its silhouette.
+
+**2. Show the reason; never assert it.** "Because the alternative gives you powers of two instead of Fibonacci"
+is a reason. "Because mechanism semantics are simultaneous" is the same claim in costume. Every rule is justified
+by something the reader can watch happen, with real output from a real run wherever the feature exists.
+
+**3. Teach the road not taken.** Concepts Roxin deliberately does **not** support are explained anyway, properly,
+including why someone would reasonably want them and what they buy. A reader cannot develop intuition about why
+Roxin is shaped the way it is if they have never met the shapes it rejected. Each rejection must state what is
+genuinely **lost**, not only what is gained. Supplemental material of this kind may be a large fraction of a
+document; that is not bloat, because rejected ideas enter every model indirectly, by way of why the model is
+built as it is. This is P2 pointed at the reader instead of the author: withholding an option removes someone's
+ability to judge, and substitutes the writer's conclusion for their own.
+
+**4. Assume nothing about what the reader concluded.** No sentence may depend on an inference that was never
+spelled out. Every new word gets a plain-language meaning before it is used; the plain word is then replaced by
+the Roxin term, which is used from then on. Beyond ordinary arithmetic and the everyday facts of whichever domain
+an example is drawn from, no mathematics, programming, or prior training is assumed.
+
+**Why.** Written at the author's description of how he learns, which is the harder and more common case and
+therefore the right target. A first pass at a new idea yields only a rough shape — describe a circle to someone
+who has never seen one and they will draw something closer to a square. Each further angle on the same idea adds
+an edge, and enough edges make the shape smooth. Understanding arrives by accumulation of worked, varied,
+deliberately-stressed instances, not by a single clear statement. Readers who grasp an idea on first exposure
+lose nothing by this treatment; readers who do not are the only ones a document can actually fail.
+
+**The measure of length.** Examples are edges, not padding, and may not be cut to shorten a document. A document
+that is too long has the wrong edges, never too many.
+
+**Status is a label, not an ordering constraint.** Where an idea belongs pedagogically is decided by the learning
+sequence alone. Syntax that is designed but unbuilt is used freely when it teaches at the right moment, marked
+plainly so no reader is misled, and each document states which subset runs today so a reader who learns by typing
+along has an unbroken path.
 
 ---
 

@@ -4,6 +4,10 @@ A generalized dynamical system is a simple idea that is usually explained in the
 research community. These guides teach the same idea in the vocabulary of **your** field, with models that are
 recognizable to people who work in it.
 
+They assume you have modelled something before. If you have not — or if the words *state*, *input* and
+*invariant* mean nothing to you yet — read [`../modeling.md`](../modeling.md) first. It teaches modeling from
+zero and hands you back here at the end.
+
 | Guide | Written for | Models that run today | Models written ahead of their features |
 |---|---|---|---|
 | [Game design and development](games.md) | game and economy designers, gameplay programmers | gold faucet and sink | cooldowns, idle-game upgrades, mana-limited combat, gacha with pity |

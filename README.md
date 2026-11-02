@@ -492,6 +492,7 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 
 | Document | What it is |
 |---|---|
+| [`docs/modeling.md`](docs/modeling.md) | from-zero guide to modeling: no mathematics, no programming, no vocabulary assumed. Start here if any of this is new |
 | [`docs/guides/`](docs/guides/README.md) | GDS taught from the point of view of a field (games, finance, life sciences, control, collective decision-making) |
 | [`docs/core-semantics.md`](docs/core-semantics.md) | what a program *means*, precisely, with verified test vectors |
 | [`docs/registry.md`](docs/registry.md) | source of truth: feature status, open questions, and every decision with alternatives, reasoning, costs, revisit triggers |
@@ -504,7 +505,7 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 
 **In this repository**
 
-- `docs/registry.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D13 and project policy P1)
+- `docs/registry.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D18 and project policies P1–P4)
 - `docs/core-semantics.md`: draft precise semantics and verified test vectors
 
 **External**
