@@ -39,7 +39,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-01 | `param` with typed default | runs | — | §3 | See NUM-08, NUM-09 for evaluation-order issues |
 | LANG-02 | `state` record declaration | runs | — | §3 | Only `int`/`float`/`bool` work at runtime; `decimal` and named types error |
 | LANG-03 | `step` with `input:` / `mechanism:` | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), [D3](#d3-input-fields-are-independent) | §4 | — |
-| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard. **Zero usage: 0 of 66 `system` declarations in the corpus use `>>`** — D2 removed its main motivation, since one mechanism writes the whole state where cadCAD needed a chain of blocks. It earns its keep only where *order* matters (settle → charge → accrue; turn order). Needs a motivating fixture — see TOOL-24 |
+| LANG-04 | `system` with `>>` composition | runs | — | §5 | Composes **endomorphisms** only — every step maps the state type to itself, so domain and codomain coincide. This is why composition is free here and why LANG-28 is hard. **Endorsed by [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization):** Part I §5 prescribes one state space, so endomorphic composition is the paper's own recommendation, not a limitation Roxin settled for. **Zero usage: 0 of 66 `system` declarations in the corpus use `>>`** — D2 removed its main motivation, since one mechanism writes the whole state where cadCAD needed a chain of blocks. It earns its keep only where *order* matters (settle → charge → accrue; turn order). Needs a motivating fixture — see TOOL-24 |
 | LANG-05 | `run … from … for N steps` | runs | — | §6 | — |
 | LANG-06 | `sweep` (Cartesian product) | runs | — | §6.1 | Zip-style sweeps unresolved — see RUN-04 |
 | LANG-07 | Mechanism must set every field exactly once | runs | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Enforced at run time, first step only; moves to checker — see CHK-01 |
@@ -49,28 +49,30 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-11 | `and` / `or` / `not` | designed | — | §2.3 | — |
 | LANG-12 | `if / then / else` as an expression | designed | — | §2.3 | **Gates 9 of 20 pending fixtures.** Highest-value unbuilt feature |
 | LANG-13 | Built-in calls (`sign`, `abs`, `min`, `max`, `sqrt`) | designed | — | §2.3 | Full math set unresolved — see LANG-26 |
-| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | — |
+| LANG-14 | `..s` pass-through in mechanisms | designed | [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) | §4 | Currently **state-specific** — the `s` is the state. If LANG-41 lands on record spread, this must generalize to a spread over *any* record, at any depth |
 | LANG-15 | `step` readable in `input:` / `allowed:` | designed | — | §5 | — |
 | LANG-16 | Named, swappable `input map` | designed | — | §3 | — |
-| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | Choices have no payloads in v1; see LANG-25 |
-| LANG-18 | `data` — replayed CSV series | designed | — | §3 | Running past end of data is an error; `for N steps` from data length unresolved — see RUN-05 |
+| LANG-17 | `type` — records, choices, aliases | designed | — | §3 | **Already settled in §3; the flat-scalar limit is a build stage, not a design principle.** Composite types are Tier 1 in the type-cost table (Part 3) — SMT handles records natively as algebraic datatypes, so records-of-records cost essentially nothing in provability and come nowhere near LANG-31's line. The author's motivation is structural honesty rather than capability: a flat `World { pool_x, pool_y, trader_gold, trader_potions }` **asserts that four things have equal standing when they do not**, which is P3's per-line test applied to the state declaration. **Prerequisite:** LANG-41 ([D22](#d22-path-assignment-is-shorthand-for-record-spread)), or nesting makes mechanisms worse than flat. See also LANG-42 for the `distinct` form and LANG-34 for record equality. Choices have no payloads in v1; see LANG-25 |
+| LANG-41 | Updating part of a record | designed | [D22](#d22-path-assignment-is-shorthand-for-record-spread) | — | **Settled: both forms, path is sugar for spread, grouped by root field.** | **Make-or-break for LANG-17.** With `state World { pool: Pool, trader: Trader }` and [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest), changing one leaf means rebuilding the whole subtree — `pool: Pool { x: s.pool.x + 1, y: s.pool.y }`. Fine for two fields, miserable for ten, so nesting without this is a regression. **Two designs.** *Record spread:* generalize `..s` from "the state" to **any record** — `pool: { ..s.pool, x: s.pool.x + 1 }`. Keeps D2 exactly as it is, since one top-level field is still set once, and reuses machinery LANG-14 already designs. *Path assignment:* let the left side be a path — `pool.x: s.pool.x + 1`. Reads better, and breaks D2: is setting `pool.x` and `pool.y` equivalent to setting `pool`, and what happens when both `pool:` and `pool.x:` appear? That is a new check and a new error class. **Also settles D2 at depth:** if "every field" means every *top-level* field, a ten-field subtree passes through as `pool: s.pool` — one line that states something meaningful (*the pool is unchanged*) where flat needs ten lines of bookkeeping. Nesting and D2 pull in the same direction |
+| LANG-18 | `data` — replayed CSV series | designed | — | §3 | Supplies inputs that **were** observed; CHK-12 derives inputs that were **not**. The two cover the paper's two data situations and should be documented as a pair. Running past end of data is an error; `for N steps` from data length unresolved — see RUN-05 |
 | LANG-19 | `until` stopping predicate | designed | [D10](#d10-order-of-checks-in-a-run) | §6 | — |
 | LANG-20 | `invariant` | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged), [D10](#d10-order-of-checks-in-a-run) | §6 | **Cite paper §4.4** — property `P` along a trajectory. Stop saying it is outside the formalism |
 | LANG-21 | Per-step derived observable (currently `metric`) | designed | — | §3 | **Rename.** Paper's "metric" is `d_X` (Assumption 3.2), a distance function. Candidates: `observe`, `derived`, `track`, `report`. The declaration shape is settled by §3 — `metric Name(s: State): type = expr`, the same shape as `invariant` — so only the keyword is open. [`modeling.md`](modeling.md) ch.7 writes **`derived`** as a placeholder and says so in the text; naming this invalidates that passage and four later cross-references |
-| LANG-22 | Lists, maps | open | — | — | **The gap against the GDS premise.** Part I motivates GDS on arbitrary data structures; Roxin has flat scalar records. Either build, or state in the README which GDS models Roxin is for. **This is the highest-consequence open decision for verification.** Multiplicity from *data* (one list of N markets) leaves the easy fragment, because reasoning over unbounded-length collections needs quantifiers or bounded unrolling. Multiplicity from *structure* (N declared copies) stays finite and statically known, so a proof sees more of the same thing. Settle it consciously rather than by default — see CHK-05 |
+| LANG-22 | Lists, maps | open | — | — | **The gap against the GDS premise.** Part I motivates GDS on arbitrary data structures; Roxin has flat scalar records. Either build, or state in the README which GDS models Roxin is for. **The tier table inverts the naive expectation: a map is cheaper than a list.** A map with a fixed key type is Tier 2 — the theory of arrays is decidable, so "no balance is ever negative" is provable over ten thousand agents with no unrolling. An unbounded list is Tier 3. So `Map<AgentId, Balance>` should very likely ship *before* `List<Agent>`, which is the opposite of the usual build order. **This is the highest-consequence open decision for verification.** Multiplicity from *data* (one list of N markets) leaves the easy fragment, because reasoning over unbounded-length collections needs quantifiers or bounded unrolling. Multiplicity from *structure* (N declared copies) stays finite and statically known, so a proof sees more of the same thing. Settle it consciously rather than by default — see CHK-05 |
 | LANG-23 | Agent populations / graphs | open | — | — | Depends on LANG-22. Needed by every agent-based model in the cadCAD corpus |
 | LANG-24 | Local `let` bindings | open | — | — | Collected from real cadCAD models |
 | LANG-25 | Sum types with payloads + `match` | open | — | — | cadCAD models pass strings and `'N/A'` padding for action dispatch; this is the typed replacement |
 | LANG-26 | Float↔int conversions, integer sqrt, non-integer powers | open | — | §11 | Which math functions ship in v1 |
 | LANG-27 | Bounded iteration | open | — | — | A line-search `while` loop appears in a cadCAD control model |
-| LANG-28 | Output map `y = C(x, d)` | deferred | — | — | **Prerequisite for subsystem composition (M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
+| LANG-28 | Output map `y = C(x, d)` | deferred | [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) | — | **Deferred by D21 until a formalization is published or Roxin's own work needs it.** The paper contains the object unnamed: §4.4's property `P(x_i)` returns a vector per footnote 6, which is an output map without a symbol, and §4.4 introduces it because observing the underlying states may be impossible — the control-theoretic observability problem in words. §5 names both things built on it, agents' "observations of each other" and "state-feedback mechanisms", and formalizes neither. **Prerequisite for subsystem composition (M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
 | LANG-29 | Mark input fields `decision` vs `disturbance` | deferred | — | — | Part I Def 2.4 deliberately unifies them, so this is an extension, not a fix. Needed only if controllability (∃ input) is ever asked alongside safety (∀ input) |
 | LANG-35 | Continuous time / ODE | rejected | — | — | Out of scope. Note Def 2.6 itself calls `f` a discrete transition |
 | LANG-30 | Non-Markovian state history | rejected | — | — | cadCAD passes `StateHistory` everywhere; this violates Def 2.9 `h : X → X`. History goes in state explicitly |
-| LANG-31 | Arbitrary host objects as state/params | rejected | — | — | Paper §5.2 permits it; cadCAD and gds-core both do it. **Rejecting it is Roxin's reason to exist** — it is what makes checking, enumeration and serialization possible |
+| LANG-31 | Arbitrary host objects as state/params | rejected | — | — | **The reframe that makes this defensible: §5.2 says parameters may be "scalars, but may also be methods, or even classes", and those are opposite ends of the spectrum.** A *class* is a record with typed fields — Tier 1, nearly free, and already designed as LANG-17. A *method* is a callable the tool cannot see inside — Tier 4, fatal. The paper's phrasing bundles the only distinction that matters, which is likely why this argument goes badly wherever it happens. Note also that §5.2 is **describing cadCAD** in an implementations section, not stating a GDS requirement. What LANG-31 actually rejects is **opacity and impurity**, not richness: three things fail at once for an opaque object — the state cannot be written down, so results are not reproducible; two states cannot be compared, so you cannot tell when the model has returned somewhere; and nothing can be enumerated, so you cannot ask what might have happened. See the type-cost table in Part 3 |
 | LANG-32 | `policy` as a keyword | rejected | — | — | Paper says Input Map. Keep the rule, but stop calling `policy` cadCAD-only vocabulary — gds-core has a `Policy` role under Zargham's direction |
 | LANG-33 | Domain aliases (turn, block, generation) | rejected | — | — | One vocabulary; guides bridge once then switch |
-| LANG-34 | Structural type equality for states and records | open | — | — | Lean is exact structural equality; width subtyping and row polymorphism later |
+| LANG-34 | Record equality, given a distinct-type form | open | — | — | **Much less load-bearing than it was, because LANG-42 decouples the two prizes.** The question looked like a forced choice: structural equality buys *generic invariants* (`invariant NonNegative(s: { gold: int })` applying to any state with a `gold` field, a shared library of conservation and bounds checks across unrelated models), while nominal buys *units* (`Celsius` and `Fahrenheit`, both `float`, not interchangeable — the single best safety feature a modelling language has). With a `distinct` form, units come from LANG-42 regardless, so record equality can be chosen on its own merits. **Note the cadCAD-ri context:** structural equality was load-bearing there because `A >> B` required A's codomain to equal B's domain, and demanding two independently-written blocks agree on a type *name* would have been brutal. [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) means Roxin has no interface matching at all — every step maps the state type to itself — so that motivation does not apply here. **Forward cost either way:** if LANG-28 ever un-defers, interface matching arrives with it and nominal becomes brittle in exactly the way it was for cadCAD-ri |
+| LANG-42 | `distinct` — a type that is not its representation | open | — | §3 | **The fungible / non-fungible primitive.** LANG-17 lists records, choices and aliases; this is the missing fourth form. `type Amount = decimal(18)` is an **alias** — Amount *is* decimal(18), interchangeable, a shorter word. `type Celsius = distinct float` is a **distinct type** — not a float, converted explicitly. It is the per-type nominal marker, applied at the definition, and it is safe there under the standing *strengthen at the definition* principle because it makes **fewer** things acceptable. A general per-type `structural` marker is the opposite and must be rejected on the same principle: it would weaken every use site in the program, including ones written later by someone else. Structural shape-matching therefore belongs as an opt-in on the **consuming** invariant or metric, never on a type declaration. **Open: what an unmarked `type X = Y` means.** The standing *boundary rule* already eliminates one option — default-alias silently weakens a guarantee, since someone writing `type Celsius = float` expecting distinctness gets `celsius + fahrenheit` type-checking with no complaint. Default-distinct survives it: being wrong is *visible and harmless*, because `type Amount = decimal(18)` used as a shorthand fails immediately and loudly rather than quietly. So the live options are **default-distinct** or **mark both and have no unmarked form**; *Defaults over configuration* argues for the former, zero-surprise for the latter. **Newly surfaced wrinkle:** if records are structural by default, `type Pool = { x: float, y: float }` unmarked names a *shape*, while `type Celsius = float` unmarked renames a *named type* — so the natural default may legitimately differ between the two cases, which needs deciding rather than assuming |
 | LANG-36 | `map` / `filter` / `fold` over collections | open | — | — | Depends on lists/maps. Termination as an opt-in guarantee |
 | LANG-37 | `extern` — foreign code | deferred | — | §11 | Four placeholder rules hold the door open: one function registry, effect labels, `extern` reserved, effects never inside mechanisms. WebAssembly is the first candidate |
 | LANG-39 | Loose and strict modes | open | — | — | Whether Roxin should offer a relaxed dialect alongside a verified one. Three distinct axes get bundled under "strict" and their costs are not comparable. **Ceremony** — how much must be declared before anything runs; loosening means inference and defaults and changes no program's meaning. **Static checking** — types, undeclared names, arity; loosening changes nothing for programs that already pass. **Runtime semantics** — admissibility, invariants, numeric exactness; loosening means the same file yields a different trajectory, which ends the property that the file determines the answer. **Lean, not ratified:** no mode. The gradient is already carried by the source text — a model stating no claims has nothing to check, not because checking was disabled but because nothing was asserted, and each clause the author adds buys a capability rather than levying a tax. The only legitimate mode shape is restrict-only intent, CHK-10. **Precedent read:** JS `"use strict"` was damage control for semantics that could not be changed, and the tell is that ES modules are strict with no opt-out; TypeScript's non-strict mode exists for incremental migration of an existing corpus, which Roxin does not have; PHP's `declare(strict_types=1)` applies at the caller's file and breaks cross-file reasoning; Rust's `unsafe` is routinely miscited as two modes but disables nothing, unlocking five operations inside a marked region |
@@ -100,7 +102,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | ADM-04 | State-dependent bounds | designed | — | §8 | Not an extension — Def 2.5 **is** `U : X → ℘(U)`. A fixed literal range is the degenerate case |
 | ADM-05 | Sweeping a parameter used in `allowed` | designed | — | §6.1 | Sweeps *the rules*, not the behavior — mechanism design in one line. Paper §5.1's governance example |
 | ADM-06 | Rules that change mid-run | designed | — | §8 | Resolved by ADM-03 + state. Whatever toggles a rule must be visible in the state; a `phase`/`mode` field is the normal pattern. **Note:** a Roxin `step` is not a stage of the run — every step runs every tick |
-| ADM-07 | Enumerable admissible sets for reachability | designed | — | §8 | `int` range, `decimal(N)` range, finite set, choice type. Float ranges are not enumerable |
+| ADM-07 | Enumerable admissible sets for reachability | designed | — | §8 | `int` range, `decimal(N)` range, finite set, choice type. Float ranges are not enumerable. **Note for motivating `allowed` to people who will never write a proof:** an enumerable admissible set is what makes CHK-12 possible, so writing `allowed` buys the ability to fit the model against observed data — a reason entirely unrelated to verification |
 | ADM-08 | What `U_x` is when `allowed:` is absent | designed | [D19](#d19-absent-allowed-means-the-whole-declared-type) | §8 | **Settled: absent means the whole declared type.** Def 4.1 needs `U_x`. With no clause, `U_x` is the whole declared type: `bool` gives 2 values, a choice type gives N, `int` and `decimal` are unbounded, `float` is not enumerable at all. Four options argued. **(A)** Absent means the full type; exploration errors when the type is not enumerable. Truthful — Def 2.5 permits `U_x = U` — and costs nothing to anyone who only simulates. **(B)** Mandatory on any step with `input:`. Everything explorable by construction, but rejected on P3 grounds: it forces statements the modeler does not believe, such as a bound on a Fibonacci counter, which is exactly the boilerplate-by-imitation failure P3 exists to prevent. **(C)** Optional plus check-time explorability reporting — see CHK-09. **(D)** A search bound supplied at the tool boundary, kept rigorously separate from legality; if one is ever recorded as the other, the model stops determining the answer. **Ruled:** A as base semantics with C's direction accepted; D deferred until choice types land. See D19 |
 
 ## 4. Numbers
@@ -117,7 +119,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | NUM-11 | Param defaults may reference earlier params | accidental | **needs decision** | contradicts §3 | Order-dependent: forward reference fails with `unknown name`. §3 says "name resolution is by declaration, in any order" |
 | NUM-08 | Derived params follow sweeps | accidental | **needs decision** | — | `param b = a * 10` with `sweep a in [1,3]` gives b = 10, 30. Genuinely useful, but invisible: the job header records only `a`. Should derived params become result columns? |
 | NUM-09 | Range-refined integer types (`type U256 = int in 0..2^256-1`) | deferred | [D1](#d1-int-is-an-arbitrary-precision-integer) | §11 | Syntax and checking details |
-| NUM-10 | State metric `d_X` | open | — | — | Paper Assumption 3.2. **D6's open item — the rule for merging near-equal float states — *is* this.** Name it `d_X` when you build it |
+| NUM-10 | State metric `d_X` | open | — | — | Paper Assumption 3.2. **D6's open item — the rule for merging near-equal float states — *is* this.** Name it `d_X` when you build it. **Shape problem to settle first:** `d_X` takes **two** states, so it does not fit LANG-21's `metric Name(s: State): type` shape, which is a pure function of one. The same applies to CHK-13's per-step change. A two-state observable is a new declaration shape, not a new keyword argument. **Second and stronger motivation: CHK-12.** Matching an observed state against a computed successor needs *nearest*, not *equal*, because real data is noisy and floats do not land exactly. Merging near-equal explorer states is a convenience; fitting a model to observations is a capability, and both are the same function |
 
 ## 5. Checking and verification
 
@@ -126,13 +128,17 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | CHK-01 | Pre-run checker: wiring, types, purity | designed | — | §9 | Ten rules listed in §9. Moves LANG-07 and NUM-04 from run time to check time |
 | CHK-02 | Duplicate declarations rejected | defect | — | §3 | §3 says "names are unique within their kind" — **nothing enforces it.** Two `state S` declarations both register; `find_state` returns the first |
 | CHK-03 | Reachability (bounded search over `allowed`) | designed | — | §8 | Depends on ADM-02, ADM-03, ADM-07. **Roxin enumerates; gds-core samples** — this is the differentiator, protect it |
-| CHK-04 | Configuration space `X_C` | open | — | — | Paper Def 4.2. Largest mutually-reachable set. Cheap once CHK-03 exists; gds-core computes it as the largest SCC |
+| CHK-04 | Configuration space `X_C` | open | — | — | Paper Def 4.2. Largest mutually-reachable set. Cheap once CHK-03 exists. **gds-core computes it as the largest SCC of the *sampled* graph, so it inherits CHK-03's sampling and answers "what we happened to visit" rather than "what is possible".** Roxin's would be exact, which is a different claim rather than a better number. [D20](#d20-invariant-violating-successors-are-shown-marked-and-terminal) also makes it cheaper than expected: terminal violating states have no outgoing edges and so cannot belong to a mutually-reachable set, meaning D20's truncation costs `X_C` nothing |
 | CHK-05 | Inductive invariant proofs via solver | open | — | — | Unbounded `int` maps to SMT integer theory (D1). gds-core uses `sympy.simplify` on an implication, which is far weaker. **Why this is tractable here:** in Dafny or F* the dominant cost is inventing loop invariants about implementation machinery — indices, partial sums, array segments — that exist only because of how code is written. A Roxin model has no loops, heap, aliasing, recursion or higher-order functions, so the obligation is one formula per step per invariant: for all `s` and `u`, `I(s)` and `u ∈ U_s` implies `I(f(s,u))`. Quantifier-free arithmetic over a fixed finite set of variables is the fragment solvers handle best. **The real work is strengthening.** A claim can be true of every reachable state and still not be inductive, in which case the solver returns a counterexample state the model never reaches; the fix is to state the reason the claim is true, which is normally a conservation law the modeler already knows. That is a domain fact, not bookkeeping — the difference from Dafny is the *kind* of missing fact, not its presence. **Hard fragments, none requiring new mathematics:** transcendentals (`exp`, `log`, `sin` — undecidable over the reals; dReal-style δ-complete procedures or Taylor models are the off-the-shelf answers, at the cost of being honest about what "proved" means under a relaxation), floats (a bit-precise IEEE theory exists but is slow and proves things about float semantics rather than the model's mathematics; most verifiers use reals plus an error bound), nonlinear arithmetic (decidable but can blow up; two or three variables is comfortable, which puts AMMs at the boundary), liveness and convergence (needs ranking functions rather than invariants), and unbounded state (see LANG-22) |
-| CHK-06 | Attainability correspondence `F` | rejected | — | — | Paper Def 3.1. Analysis machinery; nobody implements it |
-| CHK-07 | Contingent derivative, Lipschitz, existence theory | rejected | — | — | Paper §3. Requires convexity that general data structures cannot satisfy |
-| CHK-08 | Local controllability | rejected | — | — | Paper Thm 4.4 requires `X ⊆ ℝⁿ` |
+| CHK-06 | Attainability correspondence `F` | rejected | — | — | Paper Def 3.1 — every state reachable from `x0` over all admissible input sequences and all times, as one set-valued object. Roxin (1965) *defined* a GDS to be this object. Rejected as an **object**, not as a question: CHK-03 answers the same question by bounded search instead of by construction. You do not build `F`; you search it |
+| CHK-07 | Contingent derivative, Lipschitz, existence theory | rejected | — | — | Paper §3. **Why the rejection is safe, which is better than "analysis machinery".** (1) §3 is *existence theory*, and existence theorems earn their keep only where the solution cannot be constructed. In continuous time `x' ∈ F(x)` constrains a trajectory rather than computing one, so Theorem 3.6 is load-bearing; in discrete time with a computable `f` the trajectory exists by construction and the theorem answers a question that never arises. (2) The assumptions take back what §2 gave away — metric, a vector space `V(X)` over `X`, convergent state sequences, uniform Lipschitz, and a constraint set that is compact, **convex** and continuous. Convexity requires weighted averages of states to be states; there is no convex combination of three potions and four. (3) **The authors say so themselves:** §3 calls Roxin's axiomatic approach "both more general and more restrictive than our needs", more restrictive because it is "particularly dependent upon convexity" where Table 1's general specification "has no such a priori requirement". §3 appears to be there for lineage — situating GDS in Roxin 1965 — and to set up §4, which then requires `X ⊆ ℝⁿ` and abandons the generality outright. (4) Neither incumbent could build it regardless: arbitrary Python objects have no `d_X`, so the machinery fails at Assumption 3.2, three definitions before convexity. **See CHK-12 for what §3 was actually for** |
+| CHK-08 | Local controllability | rejected | — | — | Paper Thm 4.4 requires `X ⊆ ℝⁿ`. **Matching gds-core here would be actively harmful, not merely wasteful.** Their implementation is the classical Kalman rank test, which is a linear time-invariant construct by definition — so they satisfy concept matrix point 30 by reverting to exactly the special case Part I §2 was written to escape, inheriting the paper's own internal contradiction. Adding it to Roxin would mean shipping a feature that answers **confidently in a regime where its assumptions do not hold**, then explaining forever when it silently does not apply. A feature that is wrong quietly is worse than an absent one. Explained for readers in [`modeling.md`](modeling.md) ch.26 |
+| CHK-14 | P-controllability | open | — | §8 | **Concept matrix point 32 — and largely already built, as a side effect of [D20](#d20-invariant-violating-successors-are-shown-marked-and-terminal).** Paper §4.4 asks whether inputs can be chosen so that property `P` stays true. That is the **∃** question; an inductive invariant proof is the **∀** question — "does `P` hold for every input" against "is there a way to keep `P` true". D20 made invariant-violating successors terminal, so **the fan-out with violating branches pruned is the P-controllable subtree**: any surviving path of depth N witnesses that `P` can be maintained for N steps, and a fan that dies out witnesses that it cannot. The capability is a label on a search already decided upon. **Caveat:** the interesting version is adversarial — when some inputs are the modeller's and some are the world's, the real question is ∀disturbance ∃decision, which needs LANG-29's decision/disturbance marking (deferred, and whose row already says it is needed exactly when controllability is asked alongside safety). The simple version needs none of that. gds-core has `◐` here via Lyapunov and inductive safety, resting on `sympy.simplify` over an implication rather than a decision procedure |
+| CHK-15 | Observability | rejected for now | [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) | — | **Concept matrix point 33.** Classical observability asks whether the state can be reconstructed from outputs. Roxin has no output map (LANG-28, deferred by D21), so there is nothing to reconstruct *from* — and gds-core's implementation is an `observability_matrix`, another linear time-invariant construct, so CHK-08's "actively harmful to match" reasoning applies identically. **But the question has a concrete Roxin-shaped shadow in CHK-12:** when recovering an input from an observed transition yields *several* matches, the observation does not determine the input. That is observability arriving as a result rather than as a definition, and it needs no output map and no linearity. Pursue that; do not pursue the matrix |
 | CHK-09 | Explorability reported at check time | open | — | — | The checker already walks every step, so it can report per step whether `U_x` is enumerable and what the branching factor is, and per model whether the model is explorable at all. The author learns while writing rather than when the explorer refuses. Cost: this would be Roxin's first non-error diagnostic — today everything is pass or fail. **Direction settled by [D19](#d19-absent-allowed-means-the-whole-declared-type):** present it as a property of the model, the way a type is — not a warning, not a complaint. What remains open is the *mechanism*: always-printed information, a warning stream, or a separate `--explain` mode, and whether anything may ever be promoted to an error. See CHK-10 |
 | CHK-10 | `provable` — a restrict-only intent declaration | open | — | — | A line in the model file that makes the checker refuse constructs which destroy provability, stopping the author while writing instead of when a proof times out hours later. Safe because it only ever **restricts**: anything accepted under it behaves identically with the line deleted, so no program changes meaning. Lives in the file, not on the command line, so the file still determines the answer. Shaped like Rust's `forbid(unsafe_code)`, not like C's `-ffast-math`. See LANG-39 |
+| CHK-13 | Bounded state change per step | open | — | — | **The one genuine discrete shadow §3 casts beyond the metric.** Assumption 3.4's uniform Lipschitz property says states cannot move far in short times. In discrete time there is no short time — the smallest gap is one tick — so it degenerates to `d_X(x, x_next) <= M`: a bound on how far the state may move in a single step. That is checkable, useful, and invariant-shaped: "this system never jumps more than M per tick". It is concept matrix point 27 (`dx = d_X(x_plus, x)`) and the discrete residue of point 22. Depends on NUM-10. Open: whether it is a distinct construct or just an invariant once `d_X` and a two-state observable exist |
+| CHK-12 | Input recovery from observed trajectories | open | — | — | **Concept matrix point 18, and what the whole of §3 exists to serve.** §3 states the problem directly: because the attainability correspondence covers every possible input choice, it is difficult to infer from a particular trajectory whether a particular `g` produced it, so "More structure on the constraints imposed by the Input Map g is required" — and §3.1 opens by saying that connecting observed trajectories with possible input maps requires formalizing how the state changes over time. **Points 19–24 are the machinery for point 18.** They are the *analytic* route to this question, mandatory when time is continuous and the input space cannot be enumerated: characterise the set of possible rates of change, then test whether an observed trajectory's derivative lies inside it. With discrete time and an enumerable `allowed`, the same question has a direct combinatorial answer requiring none of those assumptions — so Roxin does not skip §3 as a compromise. **§3 is a workaround for a difficulty Roxin does not have.** Paper §2.10's discussion: inputs "are often unobservable, and in some cases entirely unknown", and in many science and engineering applications the Input Map must be learned by observing trajectories. This is not a side remark — §5 states MBSE requires data-driven models of *existing* systems and §5.1 says Part II was to apply GDS to systems that already exist, so half the stated purpose depends on it. **Two stages, and only the second is learning.** *Stage one, recovery:* given observed `x_k` and `x_k+1`, find the `u` in `U_x` with `f(x,u) = x_k+1`. Not an inverse problem — it is RUN-25's fan-out with an equality test on the end, over the same object as LANG-38's restricted state update map. Point 10 asks which states could have been reached; this asks which one was. **Three outcomes, all useful:** exactly one match recovers the input; **no match invalidates the model** against real data, which may be the most valuable of the three; several matches mean the observation does not determine the input, which is §4.4 observability arriving concretely rather than as a definition. *Stage two, fitting a function to the recovered pairs,* is regression and belongs to the export layer under [D17](#d17-roxin-computes-what-needs-the-model-everything-else-is-the-export-layer) — it needs the table, not the model. **Prerequisites:** an enumerable `allowed` (ADM-07, D19), a state metric for noisy or float observations (NUM-10 — real data needs *nearest* successor, not *matching* successor), complete observations (the genuinely hard part), and for multi-step systems a search over D18's dependent product. **Distinct from LANG-18.** `data` replays inputs that *were* observed; recovery is for the case the paper describes, where they were not. **Neither incumbent can do this:** cadCAD's arbitrary Python state cannot be enumerated or compared, and gds-core's transition is opaque Python behind the structural/behavioural split. Roxin could, precisely because it refused both — the restrictions that make proof possible are the same ones that make recovery possible |
 | CHK-11 | Counterexample presentation | open | — | — | **The likely differentiator.** A failed inductive step yields a state, a legal input, and the successor that breaks the claim — and nothing longer can exist, because the check never looks at a trajectory. Both states are flat records so both print, and all three are valid Roxin the author can paste back in and run. Contrast a simulation failure, which reports "broke at step 437" and leaves the author reading backwards. Dafny says "assertion might not hold" largely because a heap counterexample often has no renderable form; Roxin always has one. A failed proof that hands back a runnable model is a debugging experience rather than a verification experience. Depends on CHK-05. **A candidate format is drafted in [`modeling.md`](modeling.md) ch.24**, marked undecided: invariant name and step, then `from` / `input` / `gives`, then the claim beside the arithmetic that falsifies it, then a `reproduce:` line that is valid Roxin the reader can paste and run. The `reproduce:` line is the part worth protecting |
 
 ## 6. Execution and results
@@ -206,6 +212,7 @@ Standing principles these entries rely on (see the README):
 - **Defaults over configuration.** The 99% case must need no configuration. Every option has a named default chosen for the common case, rarely used machinery is hidden, and anything hidden stays configurable. A new feature is judged by how little it costs someone who does not use it. One of cadCAD's biggest pain points was the boilerplate needed before a basic run would execute.
 
 **Boundary rule.** A default is acceptable where a wrong default is visible and harmless. Where a wrong default could silently weaken a guarantee, the author must decide and the checker refuses to guess.
+- **Strengthen at the definition, weaken at the use site.** A marker that makes *fewer* things acceptable may sit on a declaration, because nothing downstream loses a guarantee it had. A marker that makes *more* things acceptable must sit where it is consumed, because a declaration-site weakening silently removes protection from every use site in the program — including ones written later by someone else. Same blast-radius argument as Rust's `unsafe` being a block rather than a crate attribute, and the model CHK-10's `provable` follows.
 - **Verification rule.** Every feature must state how it appears to a solver, or be marked unverifiable.
 - **Neutrality.** No field's vocabulary or conventions are privileged.
 
@@ -855,6 +862,115 @@ tedious enough to complain — which would argue for the flag rejected above, wi
 
 ---
 
+## D21. Composition beyond endomorphisms waits for a published formalization
+
+**Decision.** Roxin composes endomorphisms and nothing else. The output map (LANG-28), parallel composition as
+an operator, and within-tick feedback are **deferred until either** the GDS authors publish a formalization of
+them, **or** Roxin's own modelling work produces a concrete need. Neither trigger has fired.
+
+**This is alignment, not a shortfall.** Part I §5 prescribes composing an agent network with a plant and its
+environment *"within one state space"*, adding, of the result, "As high dimensional as that space is." That is
+endomorphic composition, and it is the paper's own recommendation — so `>>` over steps is not merely compatible
+with the formalism, it is what the formalism asks for. The concept matrix's `◐` on point 15 understates Roxin's
+position: the comparison was against gds-core's algebra, not against the paper.
+
+**What gds-core has, and how much of it is a gap.** Four operations — `>>` (sequential), `|` (parallel),
+`.feedback(wiring)` (within one evaluation), `.loop(wiring)` (across temporal boundaries) — over blocks whose
+domain and codomain may differ. Mapped honestly onto Roxin that is **not one of four**:
+- `>>` — parity. Same notation, same meaning.
+- `.loop()` — parity by construction, and Roxin has it as the only mode. A Roxin system already loops; gds-core
+  needs an operator because its blocks are not endomorphisms.
+- `|` — capability present, *declaration* absent. D2 forces a mechanism to write every field, so two independent
+  updates are one mechanism with more lines. What `|` adds is the assertion that two parts do not interact.
+- `.feedback()` — the single genuine gap, and it requires a block output that is not the whole next state.
+
+So three of the four differences reduce to one missing object: the output map. Treat LANG-28 as the one decision,
+never as four operator decisions.
+
+**Why wait.** Part I promised Parts II (applications) and III (implementation framework); neither was written, so
+the extension has never been through the step that made the original concepts actionable. In this author's
+direct experience of the lineage, **formalization is precisely what turned these ideas into something that could
+be implemented at all** — before the paper, the concepts were not in a usable form.
+
+The general principle, which outlives this instance: **code in a repository is not a specification.** An
+unformalized construct may be an exploration rather than a position, and implementing against it means building
+on someone else's open question. The evidence here supports that reading — `ControlAction` is instantiated in
+three places across roughly 103,000 lines, all hand-written examples, and no DSL generates one. That is the
+shape of a placeholder, not of a settled design. Upstream's own ranking agrees: the output map is their highest
+open question.
+
+**A caution against over-reading the gap.** gds-core's compiler flattens a composite tree into atomic blocks plus
+wiring, so after flattening the composite plausibly still denotes one transition over one state space. If so the
+block algebra is an *authoring* construct rather than a semantic extension, and there is no disagreement with
+Part I to resolve — only an ergonomic difference. This has not been confirmed. The question that would settle it:
+*after flattening, does a composite still denote a single endomorphism over a single state space, or is the
+algebra intended to support subsystems with genuinely separate state spaces and independent evolution?*
+
+**Not deferred by this.** The static read/write analysis (see LANG-04's note and `development-notes.md`). A
+mechanism's field list gives its writes and its expressions give its reads, which yields declared independence,
+safe parallelism and better errors — the thing `|` actually buys — with no new operator and no change to the
+composition algebra. gds-core makes the same information explicit as `TransitionSignature`. It is additive and
+forecloses nothing.
+
+**Revisit if.** A formalization of the output map is published, by the GDS authors or anyone else. Or a real
+Roxin model reaches the point where one state record is describing parts that have no business knowing about
+each other, which is the symptom the one-state-space prescription would be failing to handle.
+
+---
+
+## D22. Path assignment is shorthand for record spread
+
+**Decision.** A mechanism may update part of a record two ways, and the second is **defined as** the first:
+
+```
+pool: { ..s.pool, x: s.pool.x + 1 }     -- spread
+pool.x: s.pool.x + 1                    -- path, shorthand for the above
+```
+
+**The desugaring groups by root field.** Collect every path assignment in a mechanism, group them by their root,
+and merge each group into one spread. Two paths **conflict when one is a prefix of the other**, equality
+included.
+
+```
+pool.x: a    +  pool.y: b     ->  pool: { ..s.pool, x: a, y: b }                        ok
+pool.a.b: 1  +  pool.a.c: 2   ->  pool: { ..s.pool, a: { ..s.pool.a, b: 1, c: 2 } }      ok
+pool: P      +  pool.x: a     ->  conflict: `pool` is a prefix of `pool.x`               error
+pool.a: X    +  pool.a.b: 1   ->  conflict                                               error
+```
+
+After desugaring, [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) applies
+**completely unchanged** — every top-level field set exactly once. No new rule, no new error class. The checker,
+the explorer and any prover see only the spread form.
+
+**Why this does not violate "exactly one way to say each thing".** Because it is not a second way to say a
+thing — it is one thing with an abbreviation, and `modeling.md` ch.4 already states the test it passes: *where
+Roxin offers a convenience, the convenience is defined as shorthand for something you could have written
+longhand; it is never an exception to a rule you were taught.* `..s` is already such a convenience.
+
+**Alternatives considered.**
+- *Spread only.* Fine at one level of nesting, awful at three — `a: { ..s.a, b: { ..s.a.b, c: { ..s.a.b.c, d: 1 } } }`
+  against `a.b.c.d: 1`. Rejected because it makes deep records unusable and so quietly discourages LANG-17.
+- *Path only.* Reads best, but breaks D2 outright: is setting `pool.x` and `pool.y` the same as setting `pool`,
+  and what happens when both `pool:` and `pool.x:` appear? A new check and a new error class, where sugar needs
+  neither.
+- *Both as independent primitives.* Two genuine ways to say one thing, which P3 forbids. The sugar relationship
+  is what makes having both legitimate; without it this would be rejected.
+
+**Where the sugar actually earns itself: depth, not breadth.** Ten top-level fields needing updates is ten lines
+either way. The win is at three levels of nesting — which is also a standing argument for keeping state shallow.
+
+**Costs.** The desugaring is grouped rather than per-line, and a naive per-line expansion is wrong: it would
+turn `pool.x` plus `pool.y` into two assignments to `pool` and reject the most natural thing anyone would write.
+
+**Also settles D2 at depth.** "Every field" means every **top-level** field, so a ten-field subtree passes
+through as `pool: s.pool` — one line stating something meaningful (*the pool is unchanged this step*) where a
+flat record needs ten lines of bookkeeping. Nesting and D2 pull in the same direction.
+
+**Revisit if.** Real models show deep nesting is rare enough that the sugar is never reached for, in which case
+it is surface area with no customer.
+
+---
+
 # Part 3 — Reference
 
 ## Project facts worth not re-deriving
@@ -887,6 +1003,62 @@ tedious enough to complain — which would argue for the flag rejected above, wi
 | Float equality | none: needs `within` or a model-wide `tolerance` (settled) | `within`, `tolerance` |
 | Recorded columns | full state plus all metrics, every step (settled) | `record metrics only` |
 
+## What a type must support, and what each tier costs
+
+The question "which data types does Roxin support?" is asked constantly and answered badly everywhere, because
+"rich types versus verifiability" is treated as one dial. It is not. **Three independent properties** decide
+everything, and they do not move together:
+
+- **Inspectable** — can the tool see the contents?
+- **Finite-shaped** — is the size known, or at least boundable?
+- **Pure** — does touching it do anything to the world?
+
+A graph is inspectable, *unbounded*, and pure. A database handle is opaque and impure. A nested record is all
+three. These fail for different reasons and must not be lumped together.
+
+### The four tiers
+
+| Tier | What is in it | Why it costs that |
+|---|---|---|
+| **1 — free** | records, nested records, tuples, enums and choice types, fixed-size arrays, bounded integers | SMT solvers handle these natively as algebraic datatypes. This is where "classes" live. Records-of-records cost essentially nothing in provability |
+| **2 — cheap** | maps and dictionaries with a fixed key type | The theory of arrays (select/store, with extensionality) is decidable. **A map from `AgentId` to `Balance` is provable** — "no balance is ever negative" over ten thousand agents, with no unrolling. The most under-appreciated fact in this area |
+| **3 — expensive but possible** | unbounded lists, sets, graphs with changing node sets | Representable as recursive datatypes, but proofs need induction, which SMT does not do automatically. Practical routes are bounded unrolling, hand-supplied lemmas, or a solver with limited induction support. Brittle |
+| **4 — fatal** | functions as values, connections, handles, trained model objects | Not because they are complex — because they are **opaque**. Every operation becomes an uninterpreted function and essentially nothing is provable. This is where "methods" live, and it is what LANG-31 rejects |
+
+### What each position actually requires
+
+The same type is acceptable in one place and not another, because the three positions have different jobs. This
+is what turns "which types are supported" from a feature list into a derivation.
+
+| Position | Serializable | Comparable | Provable | Enumerable |
+|---|---|---|---|---|
+| `param` | **required** — results must record it or the run is not reproducible | not needed | only if an invariant mentions it | not needed |
+| state field | **required** | **required** — dedup, `d_X`, `X_C` | **required** — invariants are claims about states | not needed |
+| `input` field | **required** | **required** | **required** | **required** — `U_x` (D19) and the explorer (RUN-25) |
+
+So richer types are legitimately admissible in `param` than in `state`, and in `state` than in `input`. A
+map-valued param is recorded and never compared or enumerated; a map-valued state field needs structural equality
+and array theory, both available; a map-valued *input* needs enumeration of a product, which is infeasible.
+
+### The answers users will actually ask for
+
+| Question | Answer |
+|---|---|
+| Nested records? | Yes, costs nothing. Tier 1, LANG-17 |
+| A dict of agent balances? | Yes, and provably. Tier 2 — **lead with this, it is cheaper than a list and nobody expects that** |
+| A list of agents? | Harder than the dict: unbounded length makes every claim a claim about all lengths at once. Tier 3, LANG-22 |
+| A graph? | As the list, plus a changing node set. Tier 3 |
+| Call my pricing library mid-step? | **No** — the only genuine refusal. Not because it is complex, because it is opaque and impure. LANG-31 |
+
+Only the last is a refusal. Everything else is "yes" or "not yet, and here is the cost".
+
+### The frontier
+
+Tier 3 is where the real decision sits, and it is the data-versus-structure question from LANG-22 and
+[D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) in different clothes. **A list of
+N agents is Tier 3; N declared agent records is Tier 1.** The same model, expressed two ways, lands two tiers
+apart — which is why that choice matters far more than it appears to.
+
 ## How a solver sees each feature
 
 Every feature must state how it appears to a solver, or be explicitly marked unverifiable. The central proof is
@@ -902,6 +1074,53 @@ the mechanism's result satisfies it again. Proof support is planned, not built.
 | `sample` | a nondeterministic choice: the proof must hold for every outcome | moderate |
 | `float` | best effort (D11): a tolerance larger than the provable error bound gives *proved*; otherwise *checked on N runs* or *unverified* | hard |
 | Lists and maps | need quantifiers or bounded unrolling | hard |
+
+## Concept matrix crosswalk
+
+The author's design notes reference *GDS Part I* concepts by the row numbers of Table 1 in the concept matrix
+("point 10", "points 7-8"). This table maps the worked points to the rows that now hold their outcome, so the
+numbering keeps resolving **after** `docs/research/` is removed — that directory is conversational scaffolding,
+not part of the documentation, and nothing here depends on it surviving.
+
+| Point | Concept (Part I ref) | Where the outcome lives |
+|---|---|---|
+| 1 | State Space `X` (2.1) | LANG-02, LANG-31 |
+| 2 | State `x` (2.2) | LANG-02 |
+| 3 | Trajectory (2.3) | RUN-01 family, §6.2 results |
+| 4, 5 | Input Space `U`, Input `u` (2.4) | LANG-03, LANG-08 |
+| 6 | Stochastic influence as input (2.4 note) | [D7](#d7-random-numbers-use-pinned-algorithms-so-runs-reproduce-exactly), §7 |
+| 7, 8 | Admissible Input Space `U_x`, Admissible Input Map (2.5) | [D14](#d14-allowed-keeps-clause-structure), [D15](#d15-membership-clauses-narrow-only-conditionals-go-inside-bounds), [D19](#d19-absent-allowed-means-the-whole-declared-type); ADM-01 to ADM-08 |
+| 9 | State Update Map `f` (2.6) | LANG-03, [D2](#d2-a-mechanism-must-account-for-every-state-field-s-copies-the-rest) |
+| 10 | Restricted State Update Map (2.7) | LANG-38, RUN-25; [D17](#d17-roxin-computes-what-needs-the-model-everything-else-is-the-export-layer), [D18](#d18-the-explorers-unit-is-a-step-the-tick-is-derived), [D20](#d20-invariant-violating-successors-are-shown-marked-and-terminal) |
+| 15 | Closure under composition (abstract) | LANG-04, LANG-28; [D21](#d21-composition-beyond-endomorphisms-waits-for-a-published-formalization) |
+| 11 | Input Map `g` (2.8) | LANG-16; RUN-25's REPL surface stands a human in for `g` — **not yet worked** |
+| 12 | State Transition Map `h = f ∘ g` (2.9) | LANG-04 — **not yet worked** |
+| 13 | Markov property of `h` (2.9) | LANG-30 (history rejected) — **not yet worked** |
+| 14 | Autonomous GDS `{h, X}` (2.10) | LANG-04 — **not yet worked** |
+| 16 | Canonical form `u = g(x)`, `x⁺ = f(x,u)` (eq 1–2) | LANG-03 — **not yet worked** |
+| 17 | Posterior state `x⁺` (Table 1) | §4 — **not yet worked** |
+| 18 | Learning `g` from observed trajectories (2.10 disc.) | CHK-12 |
+| 19 | Attainability correspondence `F` (3.1) | CHK-06 |
+| 20 | Metric space `(X, d_X)` (Assumption 3.2) | NUM-10 |
+| 21, 23, 24 | Contingent derivative, constraint set, existence (3.3, 3.5, 3.6) | CHK-07 |
+| 22 | Uniform Lipschitz (3.4) | CHK-07 for the rejection, CHK-13 for its discrete residue |
+| 25 | Differential inclusion | LANG-35 |
+| 26 | Immediately reachable set `R(x)` (4.1) | CHK-03, RUN-25 |
+| 27 | State change `Δx` | CHK-13, NUM-10 |
+| 28 | Tangent cone `∂R(x)` | CHK-07 |
+| 29 | Configuration space `X_C` (4.2) | CHK-04 |
+| 30 | Local controllability (4.3, Thm 4.4) | CHK-08 |
+| 31 | Property `P` along a trajectory (4.4) | LANG-20 |
+| 32 | P-controllability (4.4) | CHK-14 |
+| 33 | Observability (4.4) | CHK-15 |
+| 34 | Optional input stage (5.2) | LANG-08 |
+
+| 35 | Parameters may be scalars, methods, or classes (5.2) | LANG-31 (rejected), LANG-37 (`extern`, deferred) — **not yet worked** |
+| 36 | Scientific controlled experiments (5.2) | [D16](#d16-model-and-experiment-are-separate-categories) — **not yet worked** |
+| 37 | Repeated stage game semantics (5.2, legacy) | — **not yet worked** |
+
+All 37 rows are named here, so the matrix is no longer needed to resolve a point number. Rows marked **not yet
+worked** have a plausible home but no conclusion recorded against them.
 
 ## Vocabulary lineage: cadCAD-ri, GDS, Roxin
 

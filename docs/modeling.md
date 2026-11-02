@@ -2665,7 +2665,7 @@ The formalism Roxin is built on comes with a body of theory, and a good deal of 
 not implemented and not going to be. You should still know what it asks, both so the papers
 make sense and so you understand what the shape of Roxin's state costs you.
 
-There is one thread running through all four of these, so watch for it.
+There is one thread running through these, so watch for it.
 
 ### Where can we get to, as a function of where we are?
 
@@ -2718,12 +2718,48 @@ mathematics has grip.
 Roxin's whole premise is that a state is **whatever structure your problem needs** — counts,
 flags, choices, eventually lists and graphs. The moment that is true, the assumption is gone.
 
+### Can we tell what happened, from what we can see?
+
+The last one, and it fails twice over — which makes it the most useful of the five.
+
+Suppose you cannot see the whole state. You see a few numbers coming out of a real system and you
+want to work backwards to what was going on inside. Can you? That question is **observability**, and
+it is half of control engineering.
+
+The classical answer is a construction that, again, assumes the state is a list of ordinary numbers
+related linearly. Same obstacle as the last three.
+
+But there is a second obstacle, particular to Roxin, and it is worth seeing because it is a choice
+rather than a limitation. **Roxin assumes you can see everything.** A run records the whole state
+every step. There is no notion of a system that shows you some numbers and hides the rest, because
+there is no separate "what this system reports" distinct from "what this system is". So the question
+*can I work out the hidden part?* has no hidden part to ask about.
+
+That changes the moment you point a model at real data. Real measurements are partial, and then the
+question comes straight back — not as "can I reconstruct the state", but as something sharper and
+genuinely answerable:
+
+> You have two consecutive observations. You know the rules. **Could more than one decision have
+> produced that change?**
+
+If exactly one could, you have learned what the decision was. If several could, then what you can
+see does not determine what happened — and *that is observability*, arriving as a result you can
+compute rather than a property you have to assume.
+
+Roxin can answer that one exactly, by fanning out every legal decision from the first observation
+and counting how many land on the second. It needs no output map and no linear algebra. It is the
+same machinery as chapter 25, pointed at data instead of at curiosity. **[designed]**
+
 ### The thread
 
-All four want the same thing: **states as points in a space you can measure distance in and
+Four of the five want the same thing: **states as points in a space you can measure distance in and
 move smoothly through.**
 
-Grant that, and a large, beautiful, decades-old body of theory applies. It is not junk. For a
+The fifth, observability, fails on that count too — but also because Roxin deliberately shows you
+the whole state, which is why its useful version reappears as a question about data rather than a
+question about hidden variables.
+
+Grant the assumption, and a large, beautiful, decades-old body of theory applies. It is not junk. For a
 pendulum or a heat exchanger it is exactly right, and if your problem is one of those, use the
 tools built for it — they will tell you things Roxin cannot.
 
