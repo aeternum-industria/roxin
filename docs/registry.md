@@ -57,7 +57,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-19 | `until` stopping predicate | designed | [D10](#d10-order-of-checks-in-a-run) | §6 | — |
 | LANG-20 | `invariant` | designed | [D8](#d8-a-violating-state-is-recorded-as-the-jobs-final-row-flagged), [D10](#d10-order-of-checks-in-a-run) | §6 | **Cite paper §4.4** — property `P` along a trajectory. Stop saying it is outside the formalism |
 | LANG-21 | Per-step derived observable (currently `metric`) | designed | — | §3 | **Rename.** Paper's "metric" is `d_X` (Assumption 3.2), a distance function. Candidates: `observe`, `derived`, `track`, `report` |
-| LANG-22 | Lists, maps | open | — | — | **The gap against the GDS premise.** Part I motivates GDS on arbitrary data structures; Roxin has flat scalar records. Either build, or state in the README which GDS models Roxin is for |
+| LANG-22 | Lists, maps | open | — | — | **The gap against the GDS premise.** Part I motivates GDS on arbitrary data structures; Roxin has flat scalar records. Either build, or state in the README which GDS models Roxin is for. **This is the highest-consequence open decision for verification.** Multiplicity from *data* (one list of N markets) leaves the easy fragment, because reasoning over unbounded-length collections needs quantifiers or bounded unrolling. Multiplicity from *structure* (N declared copies) stays finite and statically known, so a proof sees more of the same thing. Settle it consciously rather than by default — see CHK-05 |
 | LANG-23 | Agent populations / graphs | open | — | — | Depends on LANG-22. Needed by every agent-based model in the cadCAD corpus |
 | LANG-24 | Local `let` bindings | open | — | — | Collected from real cadCAD models |
 | LANG-25 | Sum types with payloads + `match` | open | — | — | cadCAD models pass strings and `'N/A'` padding for action dispatch; this is the typed replacement |
@@ -65,7 +65,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-27 | Bounded iteration | open | — | — | A line-search `while` loop appears in a cadCAD control model |
 | LANG-28 | Output map `y = C(x, d)` | deferred | — | — | **Prerequisite for subsystem composition (M9).** Needs parts whose interfaces differ, which the state/input vocabulary does not supply — see the vocabulary lineage note in Part 3. gds-core ranks it their highest open question and the paper's authors are actively working it; read their resolution, and the cadCAD RI's domain/codomain framing, before designing it |
 | LANG-29 | Mark input fields `decision` vs `disturbance` | deferred | — | — | Part I Def 2.4 deliberately unifies them, so this is an extension, not a fix. Needed only if controllability (∃ input) is ever asked alongside safety (∀ input) |
-| LANG-29 | Continuous time / ODE | rejected | — | — | Out of scope. Note Def 2.6 itself calls `f` a discrete transition |
+| LANG-35 | Continuous time / ODE | rejected | — | — | Out of scope. Note Def 2.6 itself calls `f` a discrete transition |
 | LANG-30 | Non-Markovian state history | rejected | — | — | cadCAD passes `StateHistory` everywhere; this violates Def 2.9 `h : X → X`. History goes in state explicitly |
 | LANG-31 | Arbitrary host objects as state/params | rejected | — | — | Paper §5.2 permits it; cadCAD and gds-core both do it. **Rejecting it is Roxin's reason to exist** — it is what makes checking, enumeration and serialization possible |
 | LANG-32 | `policy` as a keyword | rejected | — | — | Paper says Input Map. Keep the rule, but stop calling `policy` cadCAD-only vocabulary — gds-core has a `Policy` role under Zargham's direction |
@@ -73,6 +73,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | LANG-34 | Structural type equality for states and records | open | — | — | Lean is exact structural equality; width subtyping and row polymorphism later |
 | LANG-36 | `map` / `filter` / `fold` over collections | open | — | — | Depends on lists/maps. Termination as an opt-in guarantee |
 | LANG-37 | `extern` — foreign code | deferred | — | §11 | Four placeholder rules hold the door open: one function registry, effect labels, `extern` reserved, effects never inside mechanisms. WebAssembly is the first candidate |
+| LANG-39 | Loose and strict modes | open | — | — | Whether Roxin should offer a relaxed dialect alongside a verified one. Three distinct axes get bundled under "strict" and their costs are not comparable. **Ceremony** — how much must be declared before anything runs; loosening means inference and defaults and changes no program's meaning. **Static checking** — types, undeclared names, arity; loosening changes nothing for programs that already pass. **Runtime semantics** — admissibility, invariants, numeric exactness; loosening means the same file yields a different trajectory, which ends the property that the file determines the answer. **Lean, not ratified:** no mode. The gradient is already carried by the source text — a model stating no claims has nothing to check, not because checking was disabled but because nothing was asserted, and each clause the author adds buys a capability rather than levying a tax. The only legitimate mode shape is restrict-only intent, CHK-10. **Precedent read:** JS `"use strict"` was damage control for semantics that could not be changed, and the tell is that ES modules are strict with no opt-out; TypeScript's non-strict mode exists for incremental migration of an existing corpus, which Roxin does not have; PHP's `declare(strict_types=1)` applies at the caller's file and breaks cross-file reasoning; Rust's `unsafe` is routinely miscited as two modes but disables nothing, unlocking five operations inside a marked region |
 | LANG-38 | Restricted state update map `f\|_x` | deferred | — | — | Paper Def 2.7 — `f` with the state fixed, leaving only the input free. Its *image* is Def 4.1's `R(x)`, so RUN-25 surfaces it even though the map itself stays internal. The object an inductive proof quantifies over. Nobody implements it, including gds-core |
 
 ## 2. Syntax and lexing
@@ -98,6 +99,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | ADM-05 | Sweeping a parameter used in `allowed` | designed | — | §6.1 | Sweeps *the rules*, not the behavior — mechanism design in one line. Paper §5.1's governance example |
 | ADM-06 | Rules that change mid-run | designed | — | §8 | Resolved by ADM-03 + state. Whatever toggles a rule must be visible in the state; a `phase`/`mode` field is the normal pattern. **Note:** a Roxin `step` is not a stage of the run — every step runs every tick |
 | ADM-07 | Enumerable admissible sets for reachability | designed | — | §8 | `int` range, `decimal(N)` range, finite set, choice type. Float ranges are not enumerable |
+| ADM-08 | What `U_x` is when `allowed:` is absent | open | — | §8 | Def 4.1 needs `U_x`. With no clause, `U_x` is the whole declared type: `bool` gives 2 values, a choice type gives N, `int` and `decimal` are unbounded, `float` is not enumerable at all. Four options argued. **(A)** Absent means the full type; exploration errors when the type is not enumerable. Truthful — Def 2.5 permits `U_x = U` — and costs nothing to anyone who only simulates. **(B)** Mandatory on any step with `input:`. Everything explorable by construction, but rejected on P3 grounds: it forces statements the modeler does not believe, such as a bound on a Fibonacci counter, which is exactly the boilerplate-by-imitation failure P3 exists to prevent. **(C)** Optional plus check-time explorability reporting — see CHK-09. **(D)** A search bound supplied at the tool boundary, kept rigorously separate from legality; if one is ever recorded as the other, the model stops determining the answer. **Lean, not ratified:** A as base semantics, C layered on it, D afterwards, with `searched:` and `allowed:` printed as two lines from two sources |
 
 ## 4. Numbers
 
@@ -110,7 +112,7 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | NUM-05 | `decimal(N)` with explicit `round` | designed | [D9](#d9-decimal-multiplication-grows-precision-division-only-appears-inside-round) | §2.2 | Errors at run time today as unsupported |
 | NUM-06 | Float `==`/`!=` require a tolerance | designed | [D6](#d6-relative-tolerance-is-measured-against-the-larger-magnitude) | §2.1 | — |
 | NUM-07 | NaN / infinity / divide-by-zero stops the job | runs | [D4](#d4-nan-infinity-and-division-by-zero-stop-the-job) | §2.2 | — |
-| SYN-01 | Param defaults may reference earlier params | accidental | **needs decision** | contradicts §3 | Order-dependent: forward reference fails with `unknown name`. §3 says "name resolution is by declaration, in any order" |
+| NUM-11 | Param defaults may reference earlier params | accidental | **needs decision** | contradicts §3 | Order-dependent: forward reference fails with `unknown name`. §3 says "name resolution is by declaration, in any order" |
 | NUM-08 | Derived params follow sweeps | accidental | **needs decision** | — | `param b = a * 10` with `sweep a in [1,3]` gives b = 10, 30. Genuinely useful, but invisible: the job header records only `a`. Should derived params become result columns? |
 | NUM-09 | Range-refined integer types (`type U256 = int in 0..2^256-1`) | deferred | [D1](#d1-int-is-an-arbitrary-precision-integer) | §11 | Syntax and checking details |
 | NUM-10 | State metric `d_X` | open | — | — | Paper Assumption 3.2. **D6's open item — the rule for merging near-equal float states — *is* this.** Name it `d_X` when you build it |
@@ -123,10 +125,13 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | CHK-02 | Duplicate declarations rejected | defect | — | §3 | §3 says "names are unique within their kind" — **nothing enforces it.** Two `state S` declarations both register; `find_state` returns the first |
 | CHK-03 | Reachability (bounded search over `allowed`) | designed | — | §8 | Depends on ADM-02, ADM-03, ADM-07. **Roxin enumerates; gds-core samples** — this is the differentiator, protect it |
 | CHK-04 | Configuration space `X_C` | open | — | — | Paper Def 4.2. Largest mutually-reachable set. Cheap once CHK-03 exists; gds-core computes it as the largest SCC |
-| CHK-05 | Inductive invariant proofs via solver | open | — | — | Unbounded `int` maps to SMT integer theory (D1). gds-core uses `sympy.simplify` on an implication, which is far weaker |
+| CHK-05 | Inductive invariant proofs via solver | open | — | — | Unbounded `int` maps to SMT integer theory (D1). gds-core uses `sympy.simplify` on an implication, which is far weaker. **Why this is tractable here:** in Dafny or F* the dominant cost is inventing loop invariants about implementation machinery — indices, partial sums, array segments — that exist only because of how code is written. A Roxin model has no loops, heap, aliasing, recursion or higher-order functions, so the obligation is one formula per step per invariant: for all `s` and `u`, `I(s)` and `u ∈ U_s` implies `I(f(s,u))`. Quantifier-free arithmetic over a fixed finite set of variables is the fragment solvers handle best. **The real work is strengthening.** A claim can be true of every reachable state and still not be inductive, in which case the solver returns a counterexample state the model never reaches; the fix is to state the reason the claim is true, which is normally a conservation law the modeler already knows. That is a domain fact, not bookkeeping — the difference from Dafny is the *kind* of missing fact, not its presence. **Hard fragments, none requiring new mathematics:** transcendentals (`exp`, `log`, `sin` — undecidable over the reals; dReal-style δ-complete procedures or Taylor models are the off-the-shelf answers, at the cost of being honest about what "proved" means under a relaxation), floats (a bit-precise IEEE theory exists but is slow and proves things about float semantics rather than the model's mathematics; most verifiers use reals plus an error bound), nonlinear arithmetic (decidable but can blow up; two or three variables is comfortable, which puts AMMs at the boundary), liveness and convergence (needs ranking functions rather than invariants), and unbounded state (see LANG-22) |
 | CHK-06 | Attainability correspondence `F` | rejected | — | — | Paper Def 3.1. Analysis machinery; nobody implements it |
 | CHK-07 | Contingent derivative, Lipschitz, existence theory | rejected | — | — | Paper §3. Requires convexity that general data structures cannot satisfy |
 | CHK-08 | Local controllability | rejected | — | — | Paper Thm 4.4 requires `X ⊆ ℝⁿ` |
+| CHK-09 | Explorability reported at check time | open | — | — | The checker already walks every step, so it can report per step whether `U_x` is enumerable and what the branching factor is, and per model whether the model is explorable at all. The author learns while writing rather than when the explorer refuses. Cost: this would be Roxin's first non-error diagnostic — today everything is pass or fail. **Lean:** present it as a property of the model, the way a type is, not as a warning or a complaint. Depends on ADM-08 |
+| CHK-10 | `provable` — a restrict-only intent declaration | open | — | — | A line in the model file that makes the checker refuse constructs which destroy provability, stopping the author while writing instead of when a proof times out hours later. Safe because it only ever **restricts**: anything accepted under it behaves identically with the line deleted, so no program changes meaning. Lives in the file, not on the command line, so the file still determines the answer. Shaped like Rust's `forbid(unsafe_code)`, not like C's `-ffast-math`. See LANG-39 |
+| CHK-11 | Counterexample presentation | open | — | — | **The likely differentiator.** A failed inductive step yields a state, a legal input, and the successor that breaks the claim — and nothing longer can exist, because the check never looks at a trajectory. Both states are flat records so both print, and all three are valid Roxin the author can paste back in and run. Contrast a simulation failure, which reports "broke at step 437" and leaves the author reading backwards. Dafny says "assertion might not hold" largely because a heap counterexample often has no renderable form; Roxin always has one. A failed proof that hands back a runnable model is a debugging experience rather than a verification experience. Depends on CHK-05 |
 
 ## 6. Execution and results
 
@@ -428,6 +433,69 @@ If a state both violates an invariant and satisfies `until`, the violation wins.
 - Documents in `docs/` and the README may be drafted with AI help. Code never is.
 - The "illustrative Rust types" in `docs/core-semantics.md` are documentation of the intended shape, not source to copy; the implementation is the author's own.
 - Review is welcome: the author may paste their code and ask for explanations, bug hunting, or Rust idiom advice, and then make the changes themselves.
+
+### P2. The fixture corpus is not design evidence; implementation effort is not a design filter
+
+**Policy.** Two things that resemble evidence are not, and neither may be used to argue for or against a design.
+
+*The corpus is not evidence.* `examples/` and `tests/fixtures/` were written as development scaffolding for work
+that had already happened. They record what the parser accepted on the day they were written — not what the
+language is for, not what matters, not what users will want. Counting how many fixtures use a feature, which
+types appear in them, or how many files a change would break says nothing about whether a design is right. Tests
+come after the design is settled, and they are rewritten freely when it changes. The reasoning a unit-test suite
+cannot support — "60% of our tests look for X, so X must be what we care about" — is exactly the reasoning this
+forbids.
+
+*Effort is not a filter.* The project is exploratory. It has no stakeholders, no deadline, and no resource
+constraint the author did not choose. "That is a lot of work," "that is a big change," and "that should come
+after X" are not arguments and carry no weight. The only cost arguments that count are the ones that bound what
+is possible at all: a thing that would take a decade, or that requires mathematics or physics that does not yet
+exist. Those must be stated plainly and specifically when they are real.
+
+**What this means in practice.** Design questions get answered as though designing from scratch with unlimited
+time. Every option is put on the table, including the expensive one, with its real costs named, and the author
+filters. **Omitting an option because it looks impractical is the failure this policy exists to prevent** — it
+removes the author's ability to decide and substitutes someone else's guess about the stakes.
+
+**Why.** Both pseudo-constraints had already distorted answers in this project. Fixture type counts were cited as
+evidence about which input types matter; fixture usage counts were cited as evidence that verification features
+impose no burden; and build sequencing was offered as a reason to reject a design. All three were invalid, and
+all three pointed toward a smaller language than the author wants.
+
+---
+
+### P3. What "useful" means
+
+**Policy.** Roxin is built to be useful, and useful means exactly three things, in no priority order.
+
+- **Correct for the people who need correctness.** The language can prove things about a model, and the proofs
+  mean what they say.
+- **Easy for everyone else.** A modeler can start on a complex system right away. The system is already complex;
+  the language must not add to it.
+- **Fast for the people who care about speed.** Large sweeps and long runs are a first-class use.
+
+**The test for any construct.** *Every line in a model file must be something the modeler believes about the
+system, not something the tool needs.* A line a competent user cannot explain is a defect in the language, not a
+failure of the user.
+
+**Why this test.** It names a failure the author watched happen twice. cadCAD required roughly thirty lines of
+setup before anything useful happened, and no modeler asked could say why they had written them. cadCAD-ri
+introduced Python structure and operators that experienced Python developers had never seen, so people memorised
+syntax instead of understanding it. In both cases the language was getting in the way of the GDS. Boilerplate is
+not a tax on the user — it is a defect, because it teaches modeling by imitation, and imitation does not
+generalise to the next model.
+
+**A corollary that is often mistaken for a contradiction.** "There is exactly one way to say each thing" and "you
+must say it" are independent claims. Roxin holds the first absolutely: one way to express legality, one way to
+express a conservation law, no domain aliases, no alternative spellings. The author's disagreement with
+general-purpose languages that celebrate many ways to do a thing is about *form*, and it stands. It does not
+follow that any clause is mandatory. Forcing one produces precisely what this policy forbids — `allowed: a in
+0..2^256` on a Fibonacci counter is a statement the modeler does not believe, written to satisfy the tool.
+
+**Not a goal.** Adoption numbers. The value of the project does not depend on them, though its direction might.
+
+**Where this bites.** [ADM-08](#part-1--index) (rejecting mandatory `allowed`), [LANG-39](#part-1--index) (modes),
+and the whole of Part 1's `open` set, which should be read as "not yet argued," never as "not worth doing."
 
 ---
 
