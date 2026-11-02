@@ -164,9 +164,9 @@ row shrinks to a citation with status `designed` → gets built → status `runs
 | RUN-23 | Panic on closed stdout | defect | — | — | `roxin f.rox \| head` panics with a broken pipe. Unpleasant in exactly the pipelines fixtures and `verify_docs.py` use (severity low) |
 | RUN-24 | Model and experiment as separate categories | designed | D16 | §3 | Parser and interpreter collect one flat item list today. Prerequisite for the REPL (TOOL-20) and for any exploration form |
 | RUN-25 | State explorer — the image of `f\|_x` from a given state | open | D17, D18 | §8 | **Exploration of the potential**, as against the actual trajectory. Same engine as reachability (CHK-03): enumerate `allowed`, apply the mechanism. Depth-1 is its first usable slice. Surface undecided, leaning REPL — where the human substitutes for `g` (Def 2.8). Needs a count-first story when `U_x` is large |
-| RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships |
+| RUN-26 | Exploration output shape | open | — | §6.2 | Branching `(from, input, to)` edge list, not a trajectory. §6.2 assumes the linear shape and RUN-10 is the hardest thing to change later, so decide before export ships. **Now carries three settled requirements:** D18 makes a tick-level edge label a *tuple* of per-step inputs rather than a single `u`; D20 requires a node marker plus the violated invariant's name, and a terminal node distinguishable from an unexpanded one; D19 requires that any tool-supplied search bound be recorded separately from the model's own `allowed` |
 | RUN-27 | Type-derived membership sets | designed | [D19](#d19-absent-allowed-means-the-whole-declared-type) | §8 | **Resolved by D19:** absent `allowed` means the whole declared type, so enumerability follows from the type as much as from the clause. A `bool` input has two admissible values and a choice type has as many as it has options, both with zero author effort — which makes a choice-typed step the best first explorer demo. The residue is NUM-09: a range-refined integer type (`type Dial = int in 0..10`) would make an `int` input type-derived and finite too, which is a further argument for un-deferring it |
-| RUN-28 | Invariant-violating successors in fan-out | open | — | §8 | D8 covers runs: the violating state is the flagged final row. Exploration exists to show what *could* happen, so the argument is that they appear and are marked. This is the choice that makes the explorer useful for safety work rather than curiosity |
+| RUN-28 | Invariant-violating successors in fan-out | designed | [D20](#d20-invariant-violating-successors-are-shown-marked-and-terminal) | §8 | **Settled: shown, flagged with the invariant's name, and terminal.** An invariant is a claim about the system, not part of its definition (LANG-20, paper §4.4), so a violating successor is a state the model really produced. Not expanded, because describing what follows an impossible state is the move Roxin refuses everywhere else. Costs nothing against Def 4.2, since terminal states cannot belong to the largest mutually-reachable set anyway. **Feeds RUN-26:** the edge list needs a node marker, the invariant name, and a structural distinction between terminal and merely-unexpanded |
 
 ## 7. Tooling, testing, release
 
@@ -800,6 +800,58 @@ indistinguishable from a model property, which ends the claim that the file dete
 
 **Revisit if.** Choice types land and the share of unexplorable steps does *not* fall, which would mean
 continuous decisions are commoner than expected and D needs to be good rather than minimal.
+
+---
+
+## D20. Invariant-violating successors are shown, marked, and terminal
+
+**Decision.** When the explorer fans out from a state, successors that violate an invariant **appear in the
+output**, flagged with the invariant's name, and are **not expanded further**. The search stops at them.
+
+They are shown because an invariant is a *claim about* the system, not part of its definition. LANG-20 already
+took this reading, citing paper §4.4 — property `P` along a trajectory — and the reading is load-bearing here:
+P-controllability asks whether inputs can be chosen to keep `P` true, which is vacuous unless states violating
+`P` are reachable and visible. A violating successor is a state the model genuinely produced; what is false is
+the author's claim, not the state's existence.
+
+They are terminal because expanding past a violation means describing what happens *after* something the author
+declared impossible — which is the move Roxin refuses everywhere else, and the one that quietly converts an
+impossible thing into a merely uneventful one.
+
+**Alternatives considered.**
+- *Shown and expanded normally.* Answers "how bad does it get" and needs no qualifier on the reachable set.
+  Rejected because it gives the impossible case behaviour, because a violating region can be large and is the
+  region there is least reason to map, and because it buries the first bad state among its own descendants when
+  the first bad state is the whole point.
+- *Omitted entirely.* Smallest output, and defensible if invariants are read as defining the state space
+  (Def 3.5's constraint set). Rejected on two grounds. It makes the thing a safety search exists to find
+  invisible. And it silently merges *unreachable* with *reachable but forbidden* — two different facts, the
+  second of which is a bug report.
+- *A flag on the explorer.* Serves both uses, and is a tool argument rather than a language mode, so LANG-39
+  does not object. Rejected because a default must be chosen regardless, so it adds surface without removing the
+  decision — and a result whose meaning depends on a flag must carry the flag, as D19's deferred search bound
+  must.
+
+**Why terminal costs nothing.** Truncation is not censorship: the violating state is printed in full, and
+exploration can be restarted from it deliberately with one command — the same affordance as a failed proof's
+`reproduce:` line. Nothing is hidden; it is simply not pursued automatically.
+
+**Consistent with Definition 4.2.** The configuration space is the largest mutually-reachable set, and a terminal
+state has no outgoing edges, so it cannot belong to one. Treating violating successors as terminal therefore
+changes `X_C` not at all — the states it excludes were already excluded. This is why the choice is cheap rather
+than a trade.
+
+**Costs.** The reachable set computed this way means *reachable without passing through a violation*, and that
+qualifier has to be stated in the output and the documentation or it will be misread. The explorer cannot answer
+"how far past the limit does it go" without a second, deliberate exploration from the violating state.
+
+**Consequence for RUN-26.** The edge list needs a marker on the node and the violated invariant's name beside
+it, and a terminal node is structurally distinct from a frontier node that simply has not been expanded yet.
+RUN-26 notes the output shape is the hardest thing to change later, so this must land in the schema before
+export ships.
+
+**Revisit if.** Users routinely want the depth past a violation and find restarting from the flagged state
+tedious enough to complain — which would argue for the flag rejected above, with this behaviour as its default.
 
 ---
 
