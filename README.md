@@ -185,7 +185,7 @@ Each guide ends with a glossary that maps *your field's words* to the Roxin term
 | Lists, maps, agent populations | **[exploring]** | needed by agent-based models; not specified |
 | Local `let`, bounded loops, float/int conversions | **[exploring]** | collected from real cadCAD models |
 
-The test suite includes [52 models](docs/registry.md) with independently derived expected outputs. 32 run on today's build; the other 20 are written in advance, so each feature arrives with a ready-made test.
+There is no test corpus at present. The previous one was development scaffolding that drifted into being read as a specification, so it was deleted in full; the replacement is being built deliberately, a batch per wave, with expected values computed independently of the interpreter. The twelve models in [`examples/`](examples/) are checked against this document and the guides by `tools/verify_docs.py`.
 
 ---
 
@@ -506,7 +506,7 @@ The detailed plan, the benchmark models, the risks, and the list of known gaps a
 
 **In this repository**
 
-- `docs/registry.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D18 and project policies P1–P4)
+- `docs/registry.md`: decision log with alternatives, reasoning, costs, and revisit triggers (D1–D25 and project policies P1–P4)
 - `docs/core-semantics.md`: draft precise semantics and verified test vectors
 
 **External**

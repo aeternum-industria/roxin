@@ -299,7 +299,7 @@ enum Expr {
     Un(UnOp, Box<Expr>), Bin(BinOp, Box<Expr>, Box<Expr>),
     Cmp { op: CmpOp, l: Box<Expr>, r: Box<Expr>, within: Option<Tol> },
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Record(Vec<(Name, Expr)>), With(Box<Expr>, Vec<(Name, Expr)>),
+    Record(Vec<(Name, Expr)>), Update(Box<Expr>, Vec<(Name, Expr)>),   // { ..e, f: v } — D13, D22
     Call(Name, Vec<Expr>),
 }
 

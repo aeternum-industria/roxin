@@ -23,16 +23,27 @@ by how often something used it (P2).
 
 Everything here is wrong today and all of it is small.
 
+**The `accidental` session is done** (2 Nov 2026). All five rows are ratified — `SYN-01` by [D23](registry.md),
+`NUM-08` and `RUN-06` by D24, `RUN-07` by D25, and `NUM-11` reclassified as a defect because §3 had already
+settled it. Three of those carry build changes, listed below with the defects.
+
+**Order within this wave: defects first, then the harness, then the first models.** The old corpus was deleted,
+so nothing is waiting to be un-frozen and there is no reason to bless a known defect into a golden. Fix the
+behaviour, then write the runner, then write models against behaviour that is already correct.
+
 | | Why now |
 |---|---|
-| `RUN-20` `print_job` lost a space | One character, then regenerate 29 goldens and 3 doc blocks. **Do it before more goldens accumulate** |
+| `NUM-11` params resolve in declaration order | Contradicts §3 outright. The topological sort it needs also supplies D24's and D25's dependency graph, so it comes first |
 | `SYN-02` six of nine `LexError` messages on the wrong variant | Wrong error text is worse than none |
 | `SYN-05` `5--3` silently lexes as `5` | Silent wrong answer |
 | `SYN-03` nine unreachable `TokenKind` variants | Includes `DotDot`, which LANG-41 will need |
+| `CHK-02` duplicate declarations accepted | §3 says names are unique within their kind; nothing enforces it |
+| `RUN-20` `print_job` emits a trailing space | A job with no overrides prints `job 0 ` with nothing after it. Trailing whitespace is a golden-comparison hazard |
 | `RUN-23` panic on closed stdout | `roxin f.rox \| head` |
-| `TOOL-21` stale `unknown_sweep_param.expected` | |
-| The five `accidental` rows | A decision session, not code: `SYN-01`, `NUM-08`, `NUM-11`, `RUN-06`, `RUN-07` |
-| **The test harness** | `tests/cli.rs` with `ROXIN_BLESS=1`. Belongs here, not later — it makes every wave below cheaper, and it is where the coverage work starts |
+| `TOOL-21` `eval_params` errors carry no position | Still builds `Span {0,0}`, so an unknown sweep param points at nothing |
+| `TOOL-20` REPL parses each line as a module | D16 gives the fix; no indented declaration can currently be typed |
+| **Build changes from the ratifications** | `^` must reject a non-integer exponent and name `pow` (D23); the console job line must show overrides *and their dependents* (D24); a swept param inside a sweep list must become a check-time error (D25) |
+| **The test harness** | `tests/cli.rs` with `ROXIN_BLESS=1`, after the defects. Blessing must be one command and a reviewed diff, because the console line changes again under RUN-26 |
 
 ### Wave 1 — the expression core
 
@@ -89,7 +100,11 @@ P-controllability both fall out of Waves 6 and 7 rather than needing separate ma
 
 No dependencies on the waves; slot them wherever.
 
-- **Randomness** (§7, D7). `uniform`/`runs`/`seed` depend on nothing else and nothing else depends on them.
+- **Randomness** (§7, D7). **Not independent, despite the earlier note here saying so.** §7 settles that `sample`
+  functions are legal *only* in `input:` expressions, and §7's layer note calls stochastic-influence-as-input
+  **formalism** (Def 2.4). So sampling produces inputs, `allowed` constrains inputs (Wave 2), and the explorer
+  enumerates them (Wave 6). The generator and seeding (D7) are self-contained; what a sampled input means to
+  `allowed` and to the explorer is not, and must be settled before Wave 2.
 - **`NUM-05 decimal`.** Nothing blocks it and it blocks nothing, but there is no correct type for money until it lands.
 - **`LANG-18 data`.**
 - **`TOOL-20` REPL rebuild.** Unblocked — D16 settled the model/experiment split that tells it what to load once and what to accept per line.
@@ -155,7 +170,7 @@ right.
 - **Adoption:** the cadCAD community faded, so the niche may be small. The project's value does not depend on adoption, but its direction might.
 - **Partial evidence base:** only part of the cadCAD demo repository was reviewed (see below).
 
-Specific open gaps are Part 1 rows in [`registry.md`](registry.md) with status `open` or `accidental`.
+Specific open gaps are Part 1 rows in [`registry.md`](registry.md) with status `open` or `defect`. No row is `accidental` as of 2 Nov 2026.
 
 ## Performance notes (informal, prototype)
 
