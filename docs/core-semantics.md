@@ -259,63 +259,33 @@ All run-time errors stop only their own job.
 
 ## 11. Not yet specified
 
-Range-refined integer types; lists and maps; text values; choices with payloads; `data` connectors beyond CSV; conversion functions in full; reachability search (depth, deduplication, result shape); metric export for nested types; `keep running` syntax; checkpoint and resume; the result store; the REPL's behavior (what an unfinished definition does, how a model is reloaded); `every N steps`.
+Every gap is a Part 1 row in [`registry.md`](registry.md) with status `open` or `deferred`, tracked there with
+its dependencies and open questions. This section previously held a parallel list; keeping two copies let three
+gaps — text values, metric export for nested types, and `every N steps` — sit here with **no registry row at
+all** until 3 Nov 2026, when they became LANG-44, RUN-29 and RUN-30.
 
-## 12. Decisions needed
+## 12. Decision records
 
-We will go through these one at a time. Each has my proposal.
+Every decision shaping this document lives in [`registry.md`](registry.md) Part 2, with its alternatives, costs
+and revisit triggers. This section restated D1–D10 alongside proposals; it was reduced to this pointer on
+3 Nov 2026, once all ten were settled and the restatement had become a second copy to keep in step — and had
+already drifted, still describing itself as "decisions needed" while every entry read *settled*.
 
-| # | Decision | Proposal |
-|---|---|---|
-| D1 | Width of `int` | **Settled:** arbitrary precision. Range-refined integers (`type U256 = int in 0..2^256-1`) are a planned later addition. See the verification note below. |
-| D2 | Mechanism omits a state field | **Settled:** check error, with `..s` to copy the rest. The author must account for every field; forgetting one cannot happen silently. |
-| D3 | Independence of input fields | **Settled:** fields are independent. Input expressions cannot read each other (evaluated in declaration order). The admissible set is the product of per-field membership sets, filtered by any joint predicates, so coupling is always an explicit predicate. Keeps enumeration, random-draw order, and proofs simple. |
-| D4 | NaN, infinity, division by zero | **Settled:** errors that stop the job, recorded with step, field, and expression; other jobs continue. No propagate mode for now. |
-| D5 | Integer division | **Settled:** `//` floors, `%` is floored modulo (`a == (a // b) * b + a % b`), and plain `/` on `int` is a type error. May be revisited. |
-| D6 | Relative tolerance | **Settled:** relative to `max(\|a\|, \|b\|)`. See the rationale after section 2.1's rules. |
-| D7 | Random generator | **Settled:** xoshiro256++ seeded by SplitMix64; Box–Muller for `normal`; a pinned pure-Rust math library for bit-identical streams. Reasoning in `docs/registry.md`. |
-| D8 | Violating state | **Settled:** recorded as the job's final row, flagged with the invariant's name. Reasoning in `docs/registry.md`. |
-| D9 | Decimal multiplication and division | **Settled:** `decimal(N) * decimal(M)` is exact and gives `decimal(N+M)`; `decimal(N) * int` stays `decimal(N)`; `/` only appears as the direct argument of `round`. Reasoning in `docs/registry.md`. |
-| D10 | Order of checks in a run | **Settled:** invariants on the initial state first; `until` before each step; invariants after each step. Reasoning in `docs/registry.md`. |
+## 13. Intended internal shapes
 
-**Verification note (D1).** Unbounded integers map directly onto the integer theory of SMT solvers, so proofs about a model never need bit-vector reasoning about wraparound. Overflow is a stated property (`invariant NoOverflow(s) = s.balance < 2^256`) instead of hidden operator behavior. A model of a contract that wraps or reverts at a fixed width is an abstraction unless that bound is stated, so the guides must say so.
-
-## 13. Illustrative Rust types
-
-```rust
-enum Ty { Int, Decimal(u32), Float, Bool, Record(Vec<(Name, Ty)>), Choice(Name) }
-
-enum Value {
-    Int(i128),                         // D1 settled: unbounded semantics; start with i128, fall back to a big integer on overflow
-    Decimal { unscaled: i128, scale: u32 },
-    Float(f64),
-    Bool(bool),
-    Record(Vec<(Name, Value)>),
-    Choice(Name, Name),                // (type, option)
-}
-
-enum Expr {
-    Lit(Value), Var(Name), Field(Box<Expr>, Name),
-    Un(UnOp, Box<Expr>), Bin(BinOp, Box<Expr>, Box<Expr>),
-    Cmp { op: CmpOp, l: Box<Expr>, r: Box<Expr>, within: Option<Tol> },
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Record(Vec<(Name, Expr)>), Update(Box<Expr>, Vec<(Name, Expr)>),   // { ..e, f: v } — D13, D22
-    Call(Name, Vec<Expr>),
-}
-
-struct Step {
-    name: Name,
-    input: Vec<(Name, Ty, Expr)>,      // may be empty
-    allowed: Vec<Clause>,              // empty only if input is empty
-    mechanism: Mechanism,              // fields plus an optional spread of `s`
-}
-```
-
-The evaluator takes a state, a step index, parameters, and a random generator, and returns a new state or an error.
+Moved to [`development-notes.md`](development-notes.md), which owns implementation concerns. They were never
+semantics: under [P1](registry.md) they document the intended shape and are explicitly not source to copy.
 
 ## 14. Test vectors
 
-Every value below was computed independently with exact rational arithmetic (and IEEE doubles where noted), not by a Roxin implementation, so they can serve as the oracle for any implementation. Float comparisons in tests should use a relative tolerance of 1e-12 unless the value is exactly representable.
+Every value below was computed independently with exact rational arithmetic (and IEEE doubles where noted), not
+by a Roxin implementation, so they can serve as the oracle for any implementation.
+
+> **These are now the only independently-derived reference values in the repository.** The fixture corpus that
+> also held some was deleted on 2 Nov 2026, so this section is the seed of its replacement and the worked
+> example of the property that replacement must have: *a golden can disagree with the build and be right.*
+> Values here are checked against the build by nothing — that is deliberate, and it is what makes them an
+> oracle rather than a transcript. Float comparisons in tests should use a relative tolerance of 1e-12 unless the value is exactly representable.
 
 **Thermostat** (start 10, setpoint 20, 8 steps, `heat = k * (setpoint - temp)`; all values are exact binary fractions, so float arithmetic reproduces them exactly)
 

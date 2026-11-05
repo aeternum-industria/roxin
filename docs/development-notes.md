@@ -145,6 +145,45 @@ benchmark is in [`registry.md`](registry.md) Part 1. The replacement corpus shou
 same way — **computed independently of the interpreter**, so that a golden can disagree with the build and be
 right.
 
+### Intended internal shapes
+
+Moved here from `core-semantics.md` §13 on 3 Nov 2026 — they are implementation concerns, not semantics. Under
+[P1](registry.md) they document the intended shape and are **not source to copy**; the implementation is the
+author's own.
+
+```rust
+enum Ty { Int, Decimal(u32), Float, Bool, Record(Vec<(Name, Ty)>), Choice(Name) }
+
+enum Value {
+    Int(i128),                         // D1 settled: unbounded semantics; start with i128, fall back to a big integer on overflow
+    Decimal { unscaled: i128, scale: u32 },
+    Float(f64),
+    Bool(bool),
+    Record(Vec<(Name, Value)>),
+    Choice(Name, Name),                // (type, option)
+}
+
+enum Expr {
+    Lit(Value), Var(Name), Field(Box<Expr>, Name),
+    Un(UnOp, Box<Expr>), Bin(BinOp, Box<Expr>, Box<Expr>),
+    Cmp { op: CmpOp, l: Box<Expr>, r: Box<Expr>, within: Option<Tol> },
+    If(Box<Expr>, Box<Expr>, Box<Expr>),
+    Record(Vec<(Name, Expr)>), Update(Box<Expr>, Vec<(Name, Expr)>),   // { ..e, f: v } — D13, D22
+    Call(Name, Vec<Expr>),
+}
+
+struct Step {
+    name: Name,
+    input: Vec<(Name, Ty, Expr)>,      // may be empty
+    allowed: Vec<Clause>,              // empty only if input is empty
+    mechanism: Mechanism,              // fields plus an optional spread of `s`
+}
+```
+
+The evaluator takes a state, a step index, parameters, and a random generator, and returns a new state or an error.
+
+---
+
 ## Documentation plan
 
 - **The modeling guide, [`docs/modeling.md`](modeling.md) — drafted, 36 chapters, ~145 KB.** The on-ramp that comes *before* the field guides: those teach GDS in a reader's own field vocabulary and assume modeling is already a familiar activity, while this teaches modeling itself from zero and hands the reader to a guide at the end. Assumes no mathematics beyond arithmetic, no programming, no control theory, and no prior vocabulary; assumes only ordinary familiarity with whatever domain an example is drawn from. Held to [P4](registry.md) in full. Five acts, 36 chapters: **I — What you are actually doing** (no syntax at all); **II — Your first models**; **III — Decisions, consequences, and rules**; **IV — Being sure**; **V — Doing it for real**. One spine example carried end to end — a player with gold and potions, chosen because the decision, the consequence, the legality rule and the conservation law are all real rather than invented to satisfy the tool — with a bathtub as the second spine where rates and feedback are needed. Side examples rotate across domains so the core docs' one-third guard holds. Two chapters carry disproportionate weight and may not be trimmed: *Everything happens at once* (simultaneous mechanism evaluation, the misconception that silently produces wrong models forever) and *Starting from a blank page* (how to turn something you care about into a model at all, which nothing else in the documentation covers). Roughly a third of the document is P4 clause 3 material — concepts Roxin rejects, taught properly. It doubles as the author's own reference while building, which is why it is written early rather than last.
