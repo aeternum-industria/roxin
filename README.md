@@ -12,7 +12,7 @@ It is named for Emilio Roxin, whose 1960s work on generalized dynamical systems 
 
 ## Roxin in five minutes
 
-A thermostat. The **decision** is the `input:` line; the **physics** is the `mechanism:` line.
+Here is a complete Roxin model of a thermostat. The heater's **decision** is the `input:` line; the room's **physics** is the `mechanism:` line.
 
 <!-- example: thermostat.rox -->
 ```
@@ -40,7 +40,7 @@ run Thermostat from Room { temp: 10 } for 8 steps
 cargo run --release -- examples/thermostat.rox
 ```
 
-One run, three jobs — one per value of `k`. Each prints its states, row 0 being the start:
+That command runs the model once for each value of `k`, producing three jobs. Each job prints its states, with row 0 being the starting state you gave it:
 
 <!-- output: thermostat.rox -->
 ```
@@ -112,9 +112,11 @@ system Fibonacci: Fib = Next
 run Fibonacci from Fib { a: 0, b: 1 } for 100 steps
 ```
 
-Row 100 is `a: 354224848179261915075`, a number that does not fit in 64 bits. Written as sequential assignments, the same two lines would produce powers of two instead.
+Row 100 holds `a: 354224848179261915075`, a number too large for 64 bits. If those two mechanism lines ran one after the other instead of simultaneously, the same arithmetic would produce powers of two.
 
 ### Decide, then happen
+
+This idle-game economy keeps how much a player chooses to spend separate from what spending does to their wallet:
 
 <!-- example: game-economy.rox -->
 ```
@@ -166,11 +168,11 @@ invariant Conserved(s: Vest) = s.locked + s.released == total
 invariant Solvent(s: Wallet)  = s.gold >= 0
 ```
 
-Checked on the starting state and after every step. A violation stops that job and records the violating state as its final row, flagged — so the thing you most want to look at is the last line of the output. Other jobs keep running.
+Roxin checks every invariant on the starting state and again after each step. A violation stops that job and records the violating state as the job's final row, flagged — so the state you most want to inspect is the last line of the output. Other jobs in the same run keep going.
 
 ### Time, and periodic actors
 
-`step` counts the transition being computed, from 1, and is readable in `input:` and `allowed:`. Two robots acting on different cycles:
+`step` counts the transition being computed, from 1, and is readable in `input:` and `allowed:`. Here two robots act on different cycles, one on every second step and one on every third:
 
 ```
 step Robots:
@@ -216,13 +218,13 @@ job 0
 
 ### Layout
 
-Four spaces per level, tabs rejected, a line ending in `:` opens a block, and anything inside `( )`, `[ ]` or `{ }` may wrap freely. Comments are `--`.
+Roxin uses indentation to express structure: four spaces per level, tabs rejected, and a line ending in `:` opens a block. Anything inside `( )`, `[ ]` or `{ }` may wrap freely, and comments start with `--`.
 
 ---
 
 ## Guides for your field
 
-The same ideas, in the vocabulary and problems of one line of work. Every runnable example in them is a real model that runs.
+Each guide teaches the same concepts as this page, using the vocabulary and problems of one profession. Every example in a guide is a working model you can run from `examples/`.
 
 | Guide | For | You will build |
 |---|---|---|
@@ -232,7 +234,7 @@ The same ideas, in the vocabulary and problems of one line of work. Every runnab
 | [Control and engineering](docs/guides/control-engineering.md) | control, mechanical and electrical engineers | a thermostat, a PID controller, a system that diverges, a bang-bang controller |
 | [Collective decision-making and commons](docs/guides/governance-commons.md) | people who design or study councils, co-ops, commons, committees, DAOs | a shared fishery under different numbers of users, a quota rule against open access |
 
-Never modelled anything before? **[Start here](docs/modeling.md)** — a from-zero guide that assumes no mathematics beyond arithmetic, no programming, and no vocabulary, and hands you to a field guide at the end.
+If you have never built a model before, start with **[the from-zero modeling guide](docs/modeling.md)**. It assumes no mathematics beyond arithmetic, no programming and no prior vocabulary, and it hands you to a field guide at the end.
 
 Each guide ends with a glossary mapping its field's words to Roxin's, so a model written from one is readable by someone who learned from another. See the [guides index](docs/guides/README.md) for how to write a new one.
 
@@ -240,9 +242,9 @@ Each guide ends with a glossary mapping its field's words to Roxin's, so a model
 
 ## What Roxin is not
 
-A general-purpose programming language. A statistics or plotting environment — export the results and use your usual tools. A continuous-time ODE solver. A game engine. A bioinformatics toolkit. A smart-contract language.
+Roxin is not a general-purpose programming language, and it is not a statistics or plotting environment — export the results and use your usual tools for that. It is not a continuous-time ODE solver, a game engine, a bioinformatics toolkit, or a smart-contract language.
 
-It describes discrete-step systems with choices and rules, and answers questions about them.
+Roxin describes discrete-step systems with choices and rules, and answers questions about them.
 
 ---
 
