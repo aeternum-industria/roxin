@@ -15,6 +15,13 @@ pub struct Model {
     pub runs: Vec<RunDecl>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Mark {
+    Unvisited,
+    InProgress,
+    Done,
+}
+
 fn type_phrase(ty: &TypeExpr) -> String {
     match ty {
         TypeExpr::Int => "an int".to_string(),
@@ -95,6 +102,43 @@ fn assemble_state(
     Ok(Value::Record(fields))
 }
 
+fn visit_param(
+    i: usize,
+    params: &[ParamDecl],
+    deps: &[Vec<(usize, Span)>],
+    mark: &mut [Mark],
+    order: &mut Vec<usize>,
+    path: &mut Vec<usize>,
+) -> Result<(), EvalError> {
+    if mark[i] == Mark::Done {
+        return Ok(());
+    }
+
+    mark[i] = Mark::InProgress;
+    path.push(i);
+
+    for &(j, span) in &deps[i] {
+        if mark[j] == Mark::InProgress {
+            let from = path
+                .iter()
+                .position(|&p| p == j)
+                .expect("an in-progress param is on the path");
+            let mut chain: Vec<String> = path[from..]
+                .iter()
+                .map(|&p| format!("`{}`", params[p].name.text))
+                .collect();
+            chain.push(format!("`{}`", params[j].name.text));
+            return Err(error(span, format!("circular param default: {}. A param default may reference any other param but the references must not form a loop, since nothing in the loop can be evaluated first.", chain.join(" -> "))));
+        }
+        visit_param(j, params, deps, mark, order, path)?;
+    }
+
+    path.pop();
+    mark[i] = Mark::Done;
+    order.push(i);
+    Ok(())
+}
+
 impl Model {
     pub fn from_module(module: Module) -> Model {
         let mut model = Model::default();
@@ -126,17 +170,42 @@ impl Model {
         found.ok_or_else(|| error(name.span, format!("unknown system `{}`", name.text)))
     }
 
-    pub fn eval_params(&self, overrides: &[(String, Value)]) -> Result<Env, EvalError> {
-        for (name, _) in overrides {
-            if !self.params.iter().any(|p| &p.name.text == name) {
-                let span = Span { start: 0, end: 0 };
-                return Err(error(span, format!("unknown parameter `{name}`")));
-            }
+    pub fn param_order(&self) -> Result<Vec<usize>, EvalError> {
+        let deps: Vec<Vec<(usize, Span)>> = self
+            .params
+            .iter()
+            .map(|p| {
+                let mut names = Vec::new();
+                p.default.names(&mut names);
+                names
+                    .iter()
+                    .filter_map(|n| {
+                        self.params
+                            .iter()
+                            .position(|q| q.name.text == n.text)
+                            .map(|j| (j, n.span))
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let mut mark = vec![Mark::Unvisited; self.params.len()];
+        let mut order = Vec::with_capacity(self.params.len());
+        let mut path = Vec::new();
+
+        for start in 0..self.params.len() {
+            visit_param(start, &self.params, &deps, &mut mark, &mut order, &mut path)?;
         }
 
+        Ok(order)
+    }
+
+    pub fn eval_params(&self, overrides: &[(String, Value)]) -> Result<Env, EvalError> {
+        let order = self.param_order()?; // Gotta happen first, broham
         let mut env = Env::new();
 
-        for param in &self.params {
+        for i in order {
+            let param = &self.params[i];
             let what = format!("param `{}`", param.name.text);
             let given = overrides.iter().find(|(n, _)| n == &param.name.text);
             let value = match given {

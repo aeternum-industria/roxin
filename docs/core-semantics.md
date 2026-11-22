@@ -117,7 +117,7 @@ These forms fall into two categories (D16). **Model** forms — `param`, `tolera
 forms — `run` and its clauses — define a question asked *of* it. The engine loads the model once and applies
 experiment forms to it; a file carrying no experiment form is valid and does nothing.
 
-Name resolution is by declaration, in any order — including `param` defaults, which may reference any other param regardless of where it is declared **[settled; the build currently resolves in declaration order, registry NUM-11]**. Names are unique within their kind. Circular type aliases are errors, and so are circular `param` defaults.
+Name resolution is by declaration, in any order — including `param` defaults, which may reference any other param regardless of where it is declared **[settled, NUM-11]**. Names are unique within their kind. Circular type aliases are errors, and so are circular `param` defaults.
 
 ## 4. One step
 
@@ -173,6 +173,17 @@ for k in 1..=N:
 A `sweep p in [v1, v2, ...]` clause overrides parameter `p`, and every param whose default depends on `p`, transitively, is re-evaluated with the override in place **[settled, D24]**. A param is therefore constant within a job, not across a run.
 
 Sweep value lists are expressions, evaluated once in the default-param environment before any job exists, since the lists determine the job set. A list may reference any param that is not itself swept; referencing a swept param is a check-time error **[settled, D25]**. The console job line lists the overridden params and their dependents; the results table carries every declared param (§6.2). Several sweep clauses form the **Cartesian product** (the spec's definition). A run with `runs M` repeats each configuration M times with different random streams. Jobs are numbered in row-major order: sweep clauses in the order written, first clause slowest, Monte Carlo run fastest. Jobs are independent, so they may run in parallel without changing results.
+
+**Order of operations.** A run resolves parameters once, then forks into jobs, in this order:
+
+1. **Build the parameter dependency graph.** One node per declared param, with an edge from each param to every param its default names.
+2. **Sort the graph.** A cycle is a check-time error (§9, rule 11). An acyclic graph yields an order in which every default is evaluated after the defaults it reads, so declaration order does not matter **[settled, NUM-11]**.
+3. **Evaluate the defaults** in that order. The result is the default environment: one value for every param, with no override applied.
+4. **Evaluate the sweep value lists** in the default environment. A list may read any param, since every default now has a value; reading a *swept* param is a check-time error, because a swept param has no single value at the moment the lists are read **[settled, D25]**.
+5. **Form the job set** as the Cartesian product of the lists, each configuration repeated `runs M` times.
+6. **Re-resolve per job.** Each job's swept params take their job values, and every param whose default depends on a swept one, transitively, is recomputed in the same sorted order **[settled, D24]**. A param that depends on nothing swept keeps its default value.
+
+Steps 1 through 5 happen once per run; step 6 happens once per job. Nothing in a sweep list can therefore depend on which job is running, which is what makes the job set knowable before any job starts.
 
 ### 6.2 Results
 
@@ -241,7 +252,10 @@ Before any run, the checker verifies:
 7. input maps return the declared input record type;
 8. sweeps name declared parameters, with values of the parameter's type;
 9. metrics and invariants read only the state and parameters;
-10. reachability requests are made only on models whose state has a `tolerance` if it has float fields **[settled]**.
+10. reachability requests are made only on models whose state has a `tolerance` if it has float fields **[settled]**;
+11. `param` defaults form no cycle: the dependency graph of §6.1 is acyclic **[settled, NUM-11]**.
+
+Rule 1 cannot subsume rule 11. Every name in a cycle resolves — `a` is a declared param and so is `b` — so resolution succeeds and nothing is missing; what fails is that the evaluation order has nowhere to begin. The error names the whole loop, `a -> b -> a`, rather than the single reference that closed it, because the loop is the thing the author has to break.
 
 ## 10. Errors
 

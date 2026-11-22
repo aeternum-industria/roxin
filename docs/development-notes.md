@@ -23,6 +23,8 @@ by how often something used it (P2).
 
 Everything here is wrong today and all of it is small.
 
+**`NUM-11` and `TOOL-21` are done** (22 Nov 2026): params now resolve by dependency with cycles rejected, and `eval_params`'s span-less guard was removed rather than repaired, since `run.rs` already covers the case.
+
 **The `accidental` session is done** (2 Nov 2026). All five rows are ratified — `SYN-01` by [D23](registry.md),
 `NUM-08` and `RUN-06` by D24, `RUN-07` by D25, and `NUM-11` reclassified as a defect because §3 had already
 settled it. Three of those carry build changes, listed below with the defects.
@@ -33,14 +35,12 @@ behaviour, then write the runner, then write models against behaviour that is al
 
 | | Why now |
 |---|---|
-| `NUM-11` params resolve in declaration order | Contradicts §3 outright. The topological sort it needs also supplies D24's and D25's dependency graph, so it comes first |
 | `SYN-02` six of nine `LexError` messages on the wrong variant | Wrong error text is worse than none |
 | `SYN-05` `5--3` silently lexes as `5` | Silent wrong answer |
 | `SYN-03` nine unreachable `TokenKind` variants | Includes `DotDot`, which LANG-41 will need |
 | `CHK-02` duplicate declarations accepted | §3 says names are unique within their kind; nothing enforces it |
 | `RUN-20` `print_job` emits a trailing space | A job with no overrides prints `job 0 ` with nothing after it. Trailing whitespace is a golden-comparison hazard |
 | `RUN-23` panic on closed stdout | `roxin f.rox \| head` |
-| `TOOL-21` `eval_params` errors carry no position | Still builds `Span {0,0}`, so an unknown sweep param points at nothing |
 | `TOOL-20` REPL parses each line as a module | D16 gives the fix; no indented declaration can currently be typed |
 | **Build changes from the ratifications** | `^` must reject a non-integer exponent and name `pow` (D23); the console job line must show overrides *and their dependents* (D24); a swept param inside a sweep list must become a check-time error (D25) |
 | **The test harness** | `tests/cli.rs` with `ROXIN_BLESS=1`, after the defects. Blessing must be one command and a reviewed diff, because the console line changes again under RUN-26 |

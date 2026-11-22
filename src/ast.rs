@@ -176,4 +176,17 @@ impl Expr {
             },
         }
     }
+
+    pub fn names<'a>(&'a self, out: &mut Vec<&'a Name>) {
+        match self {
+            Expr::Number { .. } => {}
+            Expr::Name(name) => out.push(name),
+            Expr::Unary { operand, .. } => operand.names(out),
+            Expr::Binary { lhs, rhs, .. } => {
+                lhs.names(out);
+                rhs.names(out);
+            }
+            Expr::FieldAccess { base, .. } => base.names(out),
+        }
+    }
 }
